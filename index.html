@@ -1,0 +1,1715 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Meu Ministério</title>
+
+    <!-- iOS PWA Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Ministério">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3503/3503816.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+
+    <style>
+        :root {
+            --ios-bg: #F2F2F7;
+            --ios-blue: #007AFF;
+            --ios-green: #34C759;
+            --ios-red: #FF3B30;
+            --ios-gray: #8E8E93;
+            --safe-top: env(safe-area-inset-top);
+            --safe-bottom: env(safe-area-inset-bottom);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--ios-bg);
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+        }
+
+        .ios-blur {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            background-color: rgba(255, 255, 255, 0.8);
+        }
+
+        .tab-bar {
+            padding-bottom: var(--safe-bottom);
+            height: calc(65px + var(--safe-bottom));
+        }
+
+        .content-area {
+            height: calc(100vh - 65px - var(--safe-bottom));
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Esconder scrollbar */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Animações */
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+            }
+
+            to {
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+            }
+
+            to {
+                transform: translateX(0);
+            }
+        }
+
+        .animate-slide-up {
+            animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .animate-slide-in {
+            animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .btn-active:active {
+            transform: scale(0.96);
+            opacity: 0.8;
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+        }
+
+        /* Estilo para inputs de data */
+        input[type="date"] {
+            -webkit-appearance: none;
+            appearance: none;
+            position: relative;
+        }
+
+        /* Placeholder para input date em português */
+        input[type="date"]:before {
+            content: attr(placeholder);
+            position: absolute;
+            color: #9CA3AF;
+        }
+
+        input[type="date"]:focus:before,
+        input[type="date"]:valid:before {
+            content: "";
+        }
+
+        /* Modal de backup */
+        .backup-modal {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="app" class="flex flex-col h-full w-full max-w-md mx-auto relative bg-[#F2F2F7]">
+        <!-- O conteúdo será injetado aqui -->
+    </div>
+
+    <!-- Modais e Overlays -->
+    <div id="overlays"></div>
+
+    <script>
+        // --- ESTADO ---
+        let state = {
+            activeTab: 'dashboard',
+            entries: JSON.parse(localStorage.getItem('entries') || '[]'),
+            contacts: JSON.parse(localStorage.getItem('contacts') || '[]'),
+            // Migrar contatos antigos que não têm histórico
+            userProfile: JSON.parse(localStorage.getItem('userProfile') || JSON.stringify({
+                name: '',
+                role: 'publisher', // 'publisher', 'aux', 'regular'
+                auxIndefinite: false,
+                auxMonths: [],
+                auxSpecialMonths: [],
+                manualTarget: 0
+            })),
+            target: Number(localStorage.getItem('target') || '0'),
+            timer: {
+                active: false,
+                seconds: 0,
+                interval: null
+            },
+            modals: {
+                target: false,
+                entry: false,
+                contact: false,
+                manualEntry: false,
+                backup: false,
+                restore: false,
+                profile: false,
+                visit: false
+            },
+            tempContactType: 'rv',
+            tempSubject: '',
+            selectedContact: null,
+            viewingContactDetail: false,
+            viewingContactsList: false,
+            viewingFilterType: null,
+            tempManualEntry: {
+                date: '',
+                hours: 0,
+                minutes: 0,
+                rvs: 0,
+                studies: 0,
+                notes: ''
+            },
+            tempVisit: {
+                date: '',
+                notes: '',
+                nextVisitDate: '',
+                nextVisitNotes: ''
+            }
+        };
+
+        // Migração de dados segura ao iniciar
+        state.contacts = state.contacts.map(c => ({
+            ...c,
+            history: c.history || []
+        }));
+
+        // --- FUNÇÕES AUXILIARES ---
+        // Função para formatar data no formato YYYY-MM-DD (para input date)
+        const formatDateForInput = (date) => {
+            const d = new Date(date);
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        // Função para criar data sem problemas de fuso horário
+        const createLocalDate = (dateString) => {
+            // Se a data já está no formato YYYY-MM-DD, converte corretamente
+            if (dateString.includes('-')) {
+                const [year, month, day] = dateString.split('-').map(Number);
+                return new Date(year, month - 1, day);
+            }
+            // Se não, tenta converter normalmente
+            return new Date(dateString);
+        };
+
+        // Função para formatar data para exibição em português
+        const formatDateForDisplay = (dateString) => {
+            const date = createLocalDate(dateString);
+            return new Intl.DateTimeFormat('pt-BR', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+            }).format(date);
+        };
+
+        // Função para obter o nome do dia da semana em português
+        const getWeekdayName = (dateString) => {
+            const date = createLocalDate(dateString);
+            return new Intl.DateTimeFormat('pt-BR', { weekday: 'short' }).format(date);
+        };
+
+        // --- LÓGICA DE NEGÓCIO ---
+        const save = () => {
+            localStorage.setItem('entries', JSON.stringify(state.entries));
+            localStorage.setItem('contacts', JSON.stringify(state.contacts));
+            localStorage.setItem('target', state.target.toString());
+            localStorage.setItem('userProfile', JSON.stringify(state.userProfile));
+        };
+
+        // Helper para Ano de Serviço (Setembro a Agosto)
+        const getServiceYearDates = () => {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth(); // 0-11
+
+            // Se estamos em Setembro (8) ou depois, o ano de serviço começou neste ano
+            const startYear = month >= 8 ? year : year - 1;
+            const endYear = startYear + 1;
+
+            return {
+                start: new Date(startYear, 8, 1), // 1 de Setembro
+                end: new Date(endYear, 7, 31)     // 31 de Agosto
+            };
+        };
+
+        const getStats = () => {
+            const now = new Date();
+            const month = now.getMonth();
+            const year = now.getFullYear();
+            const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+
+            // --- CÁLCULO DO ALVO DINÂMICO ---
+            let currentTarget = state.userProfile.manualTarget || 0;
+
+            if (state.userProfile.role === 'regular') {
+                currentTarget = 50; // Padrão mensal para regulares (600/12)
+            } else if (state.userProfile.role === 'aux') {
+                if (state.userProfile.auxIndefinite) {
+                    currentTarget = 30; // Pode ser sobrescrito por mês especial? Vamos assumir 30 por padrão
+                    if (state.userProfile.auxSpecialMonths.includes(monthKey)) currentTarget = 15;
+                } else if (state.userProfile.auxMonths.includes(monthKey)) {
+                    currentTarget = state.userProfile.auxSpecialMonths.includes(monthKey) ? 15 : 30;
+                }
+            }
+
+            // Vamos usar uma variável local para comparativos
+            const targetToUse = currentTarget > 0 ? currentTarget : state.target;
+
+            // Estatísticas das ENTRADAS (tempo de ministério)
+            const monthEntries = state.entries.filter(e => {
+                const d = createLocalDate(e.date);
+                return d.getMonth() === month && d.getFullYear() === year;
+            });
+
+            const totalMinutes = monthEntries.reduce((acc, e) => acc + (e.hours * 60) + e.minutes, 0);
+            const totalHours = totalMinutes / 60;
+            const h = Math.floor(totalHours);
+            const m = Math.floor(totalMinutes % 60);
+
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const daysLeft = Math.max(1, daysInMonth - now.getDate() + 1);
+            const hoursLeft = Math.max(0, targetToUse - totalHours);
+            const hoursPerDay = daysLeft > 0 ? (hoursLeft / daysLeft) : 0;
+
+            // Estatísticas ANUAIS (Para Pioneiros Regulares)
+            let annualStats = null;
+            if (state.userProfile.role === 'regular') {
+                const { start, end } = getServiceYearDates();
+                const annualEntries = state.entries.filter(e => {
+                    const d = createLocalDate(e.date);
+                    return d >= start && d <= end;
+                });
+
+                const annualMinutes = annualEntries.reduce((acc, e) => acc + (e.hours * 60) + e.minutes, 0);
+                const annualHours = annualMinutes / 60;
+
+                annualStats = {
+                    totalHours: annualHours.toFixed(1),
+                    target: 600,
+                    progress: Math.min(100, (annualHours / 600) * 100),
+                    hoursLeft: Math.max(0, 600 - annualHours).toFixed(1)
+                };
+            }
+
+            // Estatísticas dos CONTATOS (revisitas e estudos)
+            const totalRVs = state.contacts.filter(c => c.type === 'rv').length;
+            const totalStudies = state.contacts.filter(c => c.type === 'study').length;
+
+            return {
+                h, m,
+                totalHours: totalHours,
+                totalMinutes: totalMinutes,
+                rvs: totalRVs,
+                studies: totalStudies,
+                progress: targetToUse > 0 ? Math.min(100, (totalHours / targetToUse) * 100) : 0,
+                suggestion: hoursPerDay.toFixed(1),
+                hoursLeft: hoursLeft.toFixed(1),
+                daysLeft: daysLeft,
+                monthName: new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(now),
+                target: targetToUse,
+                annual: annualStats
+            };
+        };
+
+
+        // --- ACTIONS ---
+        window.switchTab = (tab) => {
+            state.activeTab = tab;
+            state.viewingContactDetail = false;
+            state.viewingContactsList = false;
+            state.selectedContact = null;
+            state.viewingFilterType = null;
+            render();
+        };
+
+        // Modal Toggles
+        window.toggleTargetModal = () => { state.modals.target = !state.modals.target; render(); };
+        window.toggleProfileModal = () => { state.modals.profile = !state.modals.profile; render(); };
+        window.toggleBackupModal = () => { state.modals.backup = !state.modals.backup; render(); };
+
+        window.openContactModal = (type = 'rv') => {
+            state.tempContactType = type;
+            state.tempSubject = '';
+            state.modals.contact = true;
+            render();
+        };
+
+        window.closeContactModal = () => {
+            state.modals.contact = false;
+            state.tempSubject = '';
+            render();
+        };
+
+        // Modal para entrada manual de horas
+        window.openManualEntryModal = () => {
+            // Resetar para valores padrão com data atual
+            const today = new Date();
+            state.tempManualEntry = {
+                date: formatDateForInput(today),
+                hours: 0,
+                minutes: 0,
+                rvs: 0,
+                studies: 0,
+                notes: ''
+            };
+            state.modals.manualEntry = true;
+            render();
+        };
+
+        window.closeManualEntryModal = () => {
+            state.modals.manualEntry = false;
+            render();
+        };
+
+        // Backup e Restauração
+        window.openBackupModal = () => {
+            state.modals.backup = true;
+            render();
+        };
+
+        window.closeBackupModal = () => {
+            state.modals.backup = false;
+            render();
+        };
+
+        window.openRestoreModal = () => {
+            state.modals.restore = true;
+            render();
+        };
+
+        window.closeRestoreModal = () => {
+            state.modals.restore = false;
+            render();
+        };
+
+        window.createBackup = () => {
+            const backupData = {
+                entries: state.entries,
+                contacts: state.contacts,
+                target: state.target,
+                backupDate: new Date().toISOString(),
+                version: '1.0'
+            };
+
+            const dataStr = JSON.stringify(backupData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `backup-ministerio-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            setTimeout(() => URL.revokeObjectURL(url), 100);
+
+            alert('Backup criado com sucesso! O arquivo foi baixado.');
+            state.modals.backup = false;
+            render();
+        };
+
+        window.restoreBackup = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                try {
+                    const backupData = JSON.parse(event.target.result);
+
+                    // Validação básica do backup
+                    if (!backupData.entries || !backupData.contacts || !backupData.backupDate) {
+                        alert('Arquivo de backup inválido!');
+                        return;
+                    }
+
+                    if (confirm('Tem certeza que deseja restaurar este backup? Todos os dados atuais serão substituídos.')) {
+                        state.entries = backupData.entries;
+                        state.contacts = backupData.contacts;
+                        state.target = backupData.target || 0;
+
+                        save();
+                        alert('Backup restaurado com sucesso!');
+                        state.modals.restore = false;
+                        render();
+                    }
+                } catch (error) {
+                    alert('Erro ao ler o arquivo de backup. Certifique-se de que é um arquivo válido.');
+                }
+            };
+            reader.readAsText(file);
+        };
+
+        // Data Operations
+        // Data Operations
+        window.setTarget = (val) => {
+            state.target = val;
+            state.userProfile.manualTarget = val;
+            state.modals.target = false;
+            save();
+            render();
+        };
+
+        window.saveProfile = (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const role = form.role.value;
+
+            state.userProfile.name = form.name.value;
+            state.userProfile.role = role;
+
+            if (role === 'aux') {
+                state.userProfile.auxIndefinite = form.auxIndefinite ? form.auxIndefinite.checked : false;
+
+                // Mês atual lógica
+                const now = new Date();
+                const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+                if (form.auxThisMonth && form.auxThisMonth.checked) {
+                    if (!state.userProfile.auxMonths.includes(monthKey)) {
+                        state.userProfile.auxMonths.push(monthKey);
+                    }
+                    // Check special (15h)
+                    if (form.auxSpecial && form.auxSpecial.checked) {
+                        if (!state.userProfile.auxSpecialMonths.includes(monthKey)) {
+                            state.userProfile.auxSpecialMonths.push(monthKey);
+                        }
+                    } else {
+                        state.userProfile.auxSpecialMonths = state.userProfile.auxSpecialMonths.filter(m => m !== monthKey);
+                    }
+                } else {
+                    state.userProfile.auxMonths = state.userProfile.auxMonths.filter(m => m !== monthKey);
+                }
+            } else if (role === 'regular') {
+                // Limpar dados de aux se mudar para regular
+            }
+
+            state.modals.profile = false;
+            save();
+            render();
+        }
+
+        // VISITS OPERATIONS
+        window.openVisitModal = () => {
+            state.tempVisit = {
+                date: formatDateForInput(new Date()),
+                notes: '',
+                nextVisitDate: '',
+                nextVisitNotes: ''
+            };
+            state.modals.visit = true;
+            render();
+        }
+
+        window.closeVisitModal = () => {
+            state.modals.visit = false;
+            render();
+        }
+
+        window.saveVisit = (e) => {
+            e.preventDefault();
+            const form = e.target;
+
+            if (!state.selectedContact) return;
+
+            const newVisit = {
+                id: Date.now(),
+                date: form.date.value,
+                notes: form.notes.value,
+                nextVisitDate: form.nextVisitDate.value,
+                nextVisitNotes: form.nextVisitNotes.value
+            };
+
+            // Encontrar contato e atualizar
+            const idx = state.contacts.findIndex(c => c.id === state.selectedContact.id);
+            if (idx !== -1) {
+                // Ensure history exists
+                if (!state.contacts[idx].history) state.contacts[idx].history = [];
+                state.contacts[idx].history.unshift(newVisit);
+
+                // Atualizar dados gerais do contato se houver próxima data
+                // Isso ajuda a ordenar por "próxima visita" futuramente
+                state.selectedContact = state.contacts[idx];
+                save();
+                window.closeVisitModal();
+            }
+        }
+
+        window.deleteVisit = (visitId) => {
+            if (!confirm('Apagar este registro de visita?')) return;
+            const idx = state.contacts.findIndex(c => c.id === state.selectedContact.id);
+            if (idx !== -1) {
+                state.contacts[idx].history = state.contacts[idx].history.filter(v => v.id !== visitId);
+                state.selectedContact = state.contacts[idx];
+                save();
+                render();
+            }
+        }
+
+        window.saveContact = (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const newContact = {
+                id: Date.now(),
+                name: form.name.value,
+                address: form.address.value,
+                type: state.tempContactType,
+                subject: state.tempSubject || '',
+                createdAt: new Date().toISOString(),
+                notes: form.notes ? form.notes.value : ''
+            };
+            state.contacts.unshift(newContact);
+            state.modals.contact = false;
+            state.tempSubject = '';
+            save();
+            render();
+        };
+
+        // Função para salvar entrada manual CORRIGIDA
+        window.saveManualEntry = (e) => {
+            e.preventDefault();
+            const form = e.target;
+
+            // Usar a data diretamente do input (já está no formato YYYY-MM-DD)
+            const dateValue = form.date.value;
+
+            const newEntry = {
+                id: Date.now(),
+                date: dateValue, // Já está no formato correto
+                hours: parseInt(form.hours.value) || 0,
+                minutes: parseInt(form.minutes.value) || 0,
+                rvs: parseInt(form.rvs.value) || 0,
+                studies: parseInt(form.studies.value) || 0,
+                notes: form.notes.value || ''
+            };
+
+            state.entries.unshift(newEntry);
+            state.modals.manualEntry = false;
+            save();
+            render();
+        };
+
+        // Função para excluir uma entrada do histórico
+        window.deleteEntry = (entryId) => {
+            if (confirm('Tem certeza que deseja excluir este registro?')) {
+                const id = Number(entryId);
+                state.entries = state.entries.filter(e => e.id !== id);
+                save();
+                render();
+            }
+        };
+
+        // Timer Logic
+        window.startTimer = () => {
+            if (state.timer.active) return;
+            state.timer.active = true;
+            state.timer.seconds = 0;
+            state.timer.interval = setInterval(() => {
+                state.timer.seconds++;
+                updateTimerDisplay();
+            }, 1000);
+            render();
+        };
+
+        window.stopTimer = () => {
+            clearInterval(state.timer.interval);
+            const h = Math.floor(state.timer.seconds / 3600);
+            const m = Math.floor((state.timer.seconds % 3600) / 60);
+
+            const entry = {
+                id: Date.now(),
+                date: formatDateForInput(new Date()), // Usar formato correto
+                hours: h,
+                minutes: m,
+                rvs: 0,
+                studies: 0,
+                notes: "Sessão de cronômetro"
+            };
+
+            state.entries.unshift(entry);
+            state.timer.active = false;
+            save();
+            render();
+        };
+
+        window.cancelTimer = () => {
+            clearInterval(state.timer.interval);
+            state.timer.active = false;
+            render();
+        };
+
+        // Contact Navigation
+        window.viewContactsList = (type) => {
+            state.viewingContactsList = true;
+            state.viewingFilterType = type;
+            state.activeTab = 'contacts';
+            render();
+        };
+
+        window.viewContactDetail = (contactId) => {
+            const contact = state.contacts.find(c => c.id == contactId);
+            if (contact) {
+                state.selectedContact = contact;
+                state.viewingContactDetail = true;
+                render();
+            }
+        };
+
+        window.closeContactsList = () => {
+            state.viewingContactsList = false;
+            state.viewingFilterType = null;
+            state.activeTab = 'dashboard';
+            render();
+        };
+
+        window.closeContactDetail = () => {
+            state.viewingContactDetail = false;
+            state.selectedContact = null;
+            render();
+        };
+
+        // Função para excluir contato
+        window.deleteContact = (contactId) => {
+            if (confirm('Tem certeza que deseja excluir este contato?')) {
+                const id = Number(contactId);
+                state.contacts = state.contacts.filter(c => c.id !== id);
+                save();
+                if (state.viewingContactDetail) {
+                    state.viewingContactDetail = false;
+                    state.selectedContact = null;
+                }
+                render();
+            }
+        };
+
+        // Função para editar uma entrada existente
+        window.editEntry = (entryId) => {
+            const entry = state.entries.find(e => e.id == entryId);
+            if (!entry) return;
+
+            // Preencher o modal com os dados existentes
+            state.tempManualEntry = {
+                date: entry.date, // Já está no formato correto
+                hours: entry.hours,
+                minutes: entry.minutes,
+                rvs: entry.rvs || 0,
+                studies: entry.studies || 0,
+                notes: entry.notes || '',
+                editingId: entryId
+            };
+
+            state.modals.manualEntry = true;
+            render();
+        };
+
+        // Função para atualizar uma entrada existente
+        window.updateManualEntry = (e, entryId) => {
+            e.preventDefault();
+            const form = e.target;
+
+            const entryIndex = state.entries.findIndex(e => e.id == entryId);
+            if (entryIndex !== -1) {
+                state.entries[entryIndex] = {
+                    ...state.entries[entryIndex],
+                    date: form.date.value, // Manter formato YYYY-MM-DD
+                    hours: parseInt(form.hours.value) || 0,
+                    minutes: parseInt(form.minutes.value) || 0,
+                    rvs: parseInt(form.rvs.value) || 0,
+                    studies: parseInt(form.studies.value) || 0,
+                    notes: form.notes.value || ''
+                };
+
+                save();
+                state.modals.manualEntry = false;
+                render();
+            }
+        };
+
+        const updateTimerDisplay = () => {
+            const el = document.getElementById('timer-val');
+            if (!el) return;
+            const h = Math.floor(state.timer.seconds / 3600);
+            const m = Math.floor((state.timer.seconds % 3600) / 60);
+            const s = state.timer.seconds % 60;
+            el.innerText = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        };
+
+        // --- VIEWS ---
+        const ViewTimerBanner = () => {
+            if (!state.timer.active) return '';
+            const h = Math.floor(state.timer.seconds / 3600);
+            const m = Math.floor((state.timer.seconds % 3600) / 60);
+            const s = state.timer.seconds % 60;
+            const timeStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+
+            return `
+                <div class="bg-blue-600 text-white p-4 pt-safe-top pb-3 shadow-lg flex justify-between items-center sticky top-0 z-50">
+                    <div class="flex items-center gap-3">
+                        <div class="w-2 h-2 rounded-full bg-red-400 animate-pulse"></div>
+                        <span id="timer-val" class="font-mono text-xl font-black tracking-widest">${timeStr}</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="cancelTimer()" class="p-2 bg-white/20 rounded-full hover:bg-white/30"><i data-lucide="x" size="16"></i></button>
+                        <button onclick="stopTimer()" class="p-2 bg-white text-blue-600 rounded-full font-bold hover:bg-gray-100"><i data-lucide="square" size="16" fill="currentColor"></i></button>
+                    </div>
+                </div>
+            `;
+        };
+
+        const ViewDashboard = () => {
+            if (state.viewingContactsList) {
+                return ViewFilteredContacts();
+            }
+
+            const s = getStats();
+            const targetPercentage = state.target > 0 ? (s.totalHours / state.target) * 100 : 0;
+            const isOnTrack = s.daysLeft > 0 && (s.totalHours / (new Date().getDate() - 1)) >= (state.target / 30);
+
+            return `
+                <div class="p-6 space-y-6 animate-slide-up pb-32">
+                    <header class="flex justify-between items-end pt-4">
+                        <div>
+                            <p class="text-[11px] font-extrabold text-gray-400 uppercase tracking-widest">Mês Atual</p>
+                            <h1 class="text-4xl font-black capitalize text-gray-900">${s.monthName}</h1>
+                        </div>
+                        <div class="flex gap-2">
+                             <button onclick="toggleProfileModal()" class="bg-white p-3 rounded-2xl shadow-sm text-blue-500 btn-active relative">
+                                <i data-lucide="user-circle"></i>
+                                ${state.userProfile.role !== 'publisher' ?
+                    '<div class="absolute top-2 right-2 w-2 h-2 bg-red-400 rounded-full"></div>' : ''}
+                            </button>
+                            <button onclick="toggleTargetModal()" class="bg-white p-3 rounded-2xl shadow-sm text-blue-500 btn-active">
+                                <i data-lucide="target"></i>
+                            </button>
+                            <button onclick="toggleBackupModal()" class="bg-white p-3 rounded-2xl shadow-sm text-gray-600 btn-active">
+                                <i data-lucide="database"></i>
+                            </button>
+                        </div>
+                    </header>
+
+                    <div class="bg-gradient-to-br from-blue-600 to-blue-500 rounded-[2.5rem] p-8 text-white shadow-xl relative overflow-hidden">
+                        <div class="relative z-10 space-y-5">
+                            <div class="flex justify-between items-center opacity-80">
+                                <span class="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
+                                    <i data-lucide="clock" size="14"></i> Tempo Total
+                                </span>
+                                ${state.target > 0 ? `
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-[10px] font-bold bg-white/20 px-2 py-1 rounded-full">ALVO: ${state.target}h</span>
+                                        <span class="text-[10px] font-bold ${s.hoursLeft <= 0 ? 'bg-green-500/50' : 'bg-white/20'} px-2 py-1 rounded-full">
+                                            ${s.hoursLeft <= 0 ? '✅ CONCLUÍDO' : `FALTAM: ${s.hoursLeft}h`}
+                                        </span>
+                                    </div>
+                                ` : ''}
+                            </div>
+                            <div class="text-5xl font-black tabular-nums">${s.h}<span class="text-xl font-medium opacity-50 ml-1">h</span> ${s.m}<span class="text-xl font-medium opacity-50 ml-1">m</span></div>
+
+                            ${state.target > 0 ? `
+                                <div class="space-y-4">
+                                    <div class="space-y-2">
+                                        <div class="flex justify-between text-[10px] font-bold opacity-80">
+                                            <span>${targetPercentage.toFixed(0)}% CONCLUÍDO</span>
+                                            <span>${s.hoursLeft}h RESTANTES</span>
+                                        </div>
+                                        <div class="h-3 w-full bg-white/20 rounded-full overflow-hidden">
+                                            <div class="h-full bg-white transition-all duration-700" style="width: ${Math.min(100, targetPercentage)}%"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="bg-white/10 p-3 rounded-2xl">
+                                        <div class="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <p class="text-[10px] font-bold opacity-80 mb-1">DIAS RESTANTES</p>
+                                                <p class="text-lg font-black">${s.daysLeft}</p>
+                                            </div>
+                                            <div>
+                                                <p class="text-[10px] font-bold opacity-80 mb-1">HORAS POR DIA</p>
+                                                <p class="text-lg font-black ${parseFloat(s.suggestion) > 2 ? 'text-red-200' : 'text-white'}">${s.suggestion}h</p>
+                                            </div>
+                                        </div>
+                                        <div class="mt-2 text-[10px] font-bold opacity-80 ${isOnTrack ? 'text-green-200' : 'text-yellow-200'}">
+                                            ${s.hoursLeft <= 0 ? '🎉 Alvo alcançado!' : (isOnTrack ? '📈 No caminho certo!' : '⚡ Acelere o ritmo!')}
+                                        </div>
+                                    </div>
+                                </div>
+                            ` : ''}
+                            ${s.annual ? `
+                                <div class="mt-4 pt-4 border-t border-white/20">
+                                    <div class="flex justify-between text-[10px] font-bold opacity-80 mb-2">
+                                        <span>ANO DE SERVIÇO (${s.annual.progress.toFixed(0)}%)</span>
+                                        <span>${s.annual.totalHours}/${s.annual.target}h</span>
+                                    </div>
+                                    <div class="h-2 w-full bg-black/20 rounded-full overflow-hidden">
+                                        <div class="h-full bg-yellow-400 transition-all duration-700" style="width: ${s.annual.progress}%"></div>
+                                    </div>
+                                    <div class="text-[10px] text-center mt-1 font-bold opacity-70">
+                                        Faltam ${s.annual.hoursLeft}h para o alvo anual
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <button onclick="viewContactsList('rv')" class="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 text-left btn-active relative group">
+                            <div class="absolute top-4 right-4 bg-gray-50 text-gray-400 p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><i data-lucide="eye" size="14"></i></div>
+                            <div class="bg-green-100 text-green-600 p-2 rounded-xl w-fit mb-4"><i data-lucide="users" size="20"></i></div>
+                            <div class="text-2xl font-black text-gray-900">${s.rvs}</div>
+                            <div class="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Revisitas</div>
+                        </button>
+                        <button onclick="viewContactsList('study')" class="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 text-left btn-active relative group">
+                            <div class="absolute top-4 right-4 bg-gray-50 text-gray-400 p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><i data-lucide="eye" size="14"></i></div>
+                            <div class="bg-red-100 text-red-600 p-2 rounded-xl w-fit mb-4"><i data-lucide="graduation-cap" size="20"></i></div>
+                            <div class="text-2xl font-black text-gray-900">${s.studies}</div>
+                            <div class="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Estudos</div>
+                        </button>
+                    </div>
+
+                    <div class="space-y-3 pt-4">
+                        ${!state.timer.active ? `
+                        <button onclick="startTimer()" class="w-full bg-white text-blue-600 py-5 rounded-[22px] font-bold shadow-sm border border-blue-50 btn-active flex items-center justify-center gap-3">
+                            <i data-lucide="play-circle"></i> Iniciar Cronômetro
+                        </button>
+                        ` : ''}
+                        <button onclick="openManualEntryModal()" class="w-full bg-blue-600 text-white py-5 rounded-[22px] font-bold shadow-lg shadow-blue-100 btn-active flex items-center justify-center gap-3">
+                            <i data-lucide="plus"></i> Registrar Horas
+                        </button>
+                    </div>
+                </div>
+            `;
+        };
+
+        const ViewFilteredContacts = () => {
+            const type = state.viewingFilterType;
+            const typeName = type === 'rv' ? 'Revisitas' : 'Estudos Bíblicos';
+            const filteredContacts = state.contacts.filter(c => c.type === type);
+
+            return `
+                <div class="h-full">
+                    <div class="bg-white min-h-full p-6 pb-32">
+                        <!-- Header -->
+                        <div class="flex items-center gap-4 mb-8 pt-4">
+                            <button onclick="closeContactsList()" class="p-2 bg-gray-50 rounded-full">
+                                <i data-lucide="arrow-left"></i>
+                            </button>
+                            <div class="flex-1">
+                                <h1 class="text-2xl font-black text-gray-900">${typeName}</h1>
+                                <p class="text-sm text-gray-400">${filteredContacts.length} cadastrados</p>
+                            </div>
+                            <button onclick="openContactModal('${type}')" class="bg-blue-600 text-white p-2.5 rounded-full shadow-blue-200 shadow-lg btn-active">
+                                <i data-lucide="plus" size="18"></i>
+                            </button>
+                        </div>
+
+                        <div class="space-y-3">
+                            ${filteredContacts.length === 0 ? `
+                                <div class="text-center py-20">
+                                    <div class="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                                        <i data-lucide="${type === 'rv' ? 'users' : 'graduation-cap'}" class="text-gray-400" size="24"></i>
+                                    </div>
+                                    <p class="text-gray-400 font-medium mb-2">Nenhum ${type === 'rv' ? 'revisita' : 'estudo'} cadastrado</p>
+                                    <button onclick="openContactModal('${type}')" class="text-blue-500 font-bold">
+                                        Adicionar ${type === 'rv' ? 'revisita' : 'estudo'}
+                                    </button>
+                                </div>
+                            ` : ''}
+                            
+                            ${filteredContacts.map(c => `
+                                <button onclick="viewContactDetail(${c.id})" class="w-full text-left btn-active">
+                                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-50 flex items-center gap-4">
+                                        <div class="w-12 h-12 rounded-full flex items-center justify-center font-bold text-white text-lg shrink-0 ${c.type === 'study' ? 'bg-red-400' : 'bg-green-400'}">
+                                            ${c.name.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <h4 class="font-bold text-gray-900 truncate">${c.name}</h4>
+                                            <div class="text-xs text-gray-400 truncate">${c.address || 'Sem endereço'}</div>
+                                            ${c.subject ? `<div class="text-xs text-blue-500 font-medium truncate mt-1">${c.subject}</div>` : ''}
+                                        </div>
+                                    </div>
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        };
+
+        const ViewContacts = () => {
+            if (state.viewingContactDetail && state.selectedContact) {
+                return ViewContactDetail();
+            }
+
+            const filteredContacts = state.contacts;
+            return `
+                <div class="p-6 space-y-6 animate-slide-up pb-32">
+                    <header class="flex justify-between items-center pt-8">
+                        <div>
+                             <h1 class="text-3xl font-black text-gray-900">Interessados</h1>
+                             <p class="text-sm text-gray-400 font-medium">${state.contacts.length} cadastrados</p>
+                        </div>
+                        <button onclick="openContactModal('rv')" class="bg-blue-600 text-white p-3 rounded-2xl shadow-blue-200 shadow-lg btn-active">
+                            <i data-lucide="plus"></i>
+                        </button>
+                    </header>
+
+                    <div class="space-y-3">
+                        ${filteredContacts.length === 0 ? '<div class="text-center py-20 text-gray-400">Nenhum interessado encontrado.</div>' : ''}
+                        ${filteredContacts.map(c => `
+                            <button onclick="viewContactDetail(${c.id})" class="w-full text-left btn-active">
+                                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-50 flex items-center gap-4">
+                                    <div class="w-12 h-12 rounded-full flex items-center justify-center font-bold text-white text-lg shrink-0 ${c.type === 'study' ? 'bg-red-400' : 'bg-green-400'}">
+                                        ${c.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <h4 class="font-bold text-gray-900 truncate">${c.name}</h4>
+                                        <div class="text-xs text-gray-400 truncate">${c.address || 'Sem endereço'}</div>
+                                        ${c.subject ? `<div class="text-xs text-blue-500 font-medium truncate mt-1">${c.subject}</div>` : ''}
+                                    </div>
+                                    <div class="bg-gray-50 px-2 py-1 rounded text-[10px] font-bold uppercase text-gray-400 shrink-0">
+                                        ${c.type === 'study' ? 'Estudo' : 'Revisita'}
+                                    </div>
+                                </div>
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        };
+
+        const ViewContactDetail = () => {
+            const contact = state.selectedContact;
+            if (!contact) return '<div class="p-20 text-center text-gray-400">Contato não encontrado.</div>';
+
+            const formattedDate = new Intl.DateTimeFormat('pt-BR', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric'
+            }).format(new Date(contact.createdAt));
+
+            return `
+                <div class="h-full animate-slide-in">
+                    <div class="bg-white min-h-full p-6 pb-32">
+                        <!-- Header -->
+                        <div class="flex items-center gap-4 mb-6 pt-4">
+                            <button onclick="closeContactDetail()" class="p-2 bg-gray-50 rounded-full">
+                                <i data-lucide="arrow-left"></i>
+                            </button>
+                            <div class="flex-1">
+                                <h1 class="text-xl font-black text-gray-900 truncate">${contact.name}</h1>
+                                <p class="text-xs text-gray-400 font-bold uppercase">${contact.type === 'study' ? 'Estudo Bíblico' : 'Revisita'}</p>
+                            </div>
+                            <button onclick="editContact(${contact.id})" class="p-2 text-blue-600">
+                                <i data-lucide="edit-2" size="20"></i>
+                            </button>
+                        </div>
+
+                        <!-- Main Info -->
+                        <div class="space-y-4 mb-8">
+                             ${contact.address ? `
+                                <div class="flex gap-3 items-start">
+                                    <i data-lucide="map-pin" class="text-gray-400 mt-1" size="16"></i>
+                                    <p class="text-gray-700 font-medium">${contact.address}</p>
+                                </div>
+                            ` : ''}
+                            ${contact.notes ? `
+                                <div class="bg-yellow-50 p-4 rounded-2xl border border-yellow-100">
+                                    <div class="flex gap-2 mb-1 text-yellow-700 font-bold text-xs uppercase">
+                                        <i data-lucide="sticky-note" size="14"></i> Nota Fixa
+                                    </div>
+                                    <p class="text-yellow-900 text-sm">${contact.notes}</p>
+                                </div>
+                            ` : ''}
+                        </div>
+
+                        <!-- VISITS HISTORY SECTION -->
+                        <div>
+                            <div class="flex justify-between items-end mb-4">
+                                <h2 class="text-lg font-black text-gray-900">Histórico de Visitas</h2>
+                                <button onclick="openVisitModal()" class="bg-blue-600 text-white px-4 py-2 rounded-full font-bold text-sm shadow-blue-200 shadow-md flex items-center gap-2">
+                                    <i data-lucide="plus" size="14"></i> Nova Visita
+                                </button>
+                            </div>
+
+                            <div class="space-y-4">
+                                ${(!contact.history || contact.history.length === 0) ?
+                    '<div class="text-center py-8 bg-gray-50 rounded-2xl text-gray-400 text-sm">Nenhuma visita registrada ainda.</div>'
+                    :
+                    contact.history.map(v => `
+                                        <div class="relative pl-6 pb-6 border-l-2 border-gray-100 last:pb-0 last:border-0">
+                                            <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-blue-100 border-2 border-blue-500"></div>
+                                            
+                                            <div class="mb-1 flex justify-between items-start">
+                                                <span class="font-bold text-gray-900">${formatDateForDisplay(v.date)}</span>
+                                                <button onclick="deleteVisit(${v.id})" class="text-gray-300 hover:text-red-400"><i data-lucide="trash-2" size="14"></i></button>
+                                            </div>
+                                            
+                                            <div class="bg-white border border-gray-100 p-4 rounded-2xl shadow-sm">
+                                                <p class="text-gray-700 mb-3">${v.notes || 'Sem anotações'}</p>
+                                                
+                                                ${(v.nextVisitDate || v.nextVisitNotes) ? `
+                                                    <div class="bg-blue-50 p-3 rounded-xl border border-blue-100 text-sm">
+                                                        <div class="flex items-center gap-2 font-bold text-blue-700 mb-1">
+                                                            <i data-lucide="calendar-arrow-right" size="14"></i>
+                                                            Próxima Visita
+                                                            ${v.nextVisitDate ? `<span class="bg-white px-2 py-0.5 rounded text-blue-600 border border-blue-200 text-xs">${formatDateForDisplay(v.nextVisitDate)}</span>` : ''}
+                                                        </div>
+                                                        ${v.nextVisitNotes ? `<p class="text-blue-800 ml-6">${v.nextVisitNotes}</p>` : ''}
+                                                    </div>
+                                                ` : ''}
+                                            </div>
+                                        </div>
+                                    `).join('')
+                }
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            `;
+        };
+
+        const ViewHistory = () => `
+            <div class="p-6 space-y-6 animate-slide-up pb-32">
+                <header class="pt-8">
+                    <h1 class="text-3xl font-black text-gray-900">Histórico</h1>
+                    <p class="text-sm text-gray-400 font-medium">Últimas atividades registradas</p>
+                </header>
+                
+                <div class="flex gap-3 mb-6">
+                    <button onclick="openManualEntryModal()" class="flex-1 bg-blue-600 text-white py-3 rounded-[18px] font-bold shadow-lg shadow-blue-100 btn-active flex items-center justify-center gap-2">
+                        <i data-lucide="plus" size="16"></i> Novo Registro
+                    </button>
+                </div>
+                
+                <div class="space-y-3">
+                    ${state.entries.length === 0 ? '<p class="text-center py-20 text-gray-400">Nenhum registro ainda.</p>' : ''}
+                    ${state.entries.map(e => {
+            const formattedDate = formatDateForDisplay(e.date);
+            const weekday = getWeekdayName(e.date);
+
+            return `
+                            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-50">
+                                <div class="flex justify-between items-start mb-2">
+                                    <div class="flex-1">
+                                        <div class="font-bold text-gray-900">${formattedDate}</div>
+                                        <div class="text-xs text-gray-400">${e.notes || 'Sem anotações'}</div>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button onclick="editEntry(${e.id})" class="p-1.5 text-blue-400 hover:text-blue-600">
+                                            <i data-lucide="edit-2" size="14"></i>
+                                        </button>
+                                        <button onclick="deleteEntry(${e.id})" class="p-1.5 text-red-400 hover:text-red-600">
+                                            <i data-lucide="trash-2" size="14"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="flex justify-between items-center pt-2 border-t border-gray-50">
+                                    <div>
+                                        <div class="text-blue-600 font-black">${e.hours}h ${e.minutes}m</div>
+                                        <div class="text-[10px] text-gray-400 font-bold uppercase">${e.rvs || 0} RVs • ${e.studies || 0} Est.</div>
+                                    </div>
+                                    <div class="text-xs text-gray-500 capitalize">
+                                        ${weekday}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+        }).join('')}
+                </div>
+            </div>
+        `;
+
+        const ViewReport = () => {
+            const s = getStats();
+            return `
+                <div class="p-6 space-y-6 animate-slide-up pb-32">
+                    <header class="pt-8">
+                        <h1 class="text-3xl font-black text-gray-900">Relatório</h1>
+                        <p class="text-sm text-gray-400 font-medium">Pronto para enviar</p>
+                    </header>
+                    <div class="bg-white rounded-[2.5rem] overflow-hidden shadow-sm border border-gray-100">
+                        <div class="bg-gray-50/50 p-8 text-center border-b border-gray-100">
+                            <p class="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1">Resumo do Mês</p>
+                            <h2 class="text-2xl font-black text-gray-900 capitalize">${s.monthName}</h2>
+                        </div>
+                        <div class="p-8 space-y-6">
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-500 font-bold">Horas</span>
+                                <span class="text-3xl font-black text-blue-600">${s.h}h ${s.m}m</span>
+                            </div>
+                            
+                            <!-- Informações do Relatório Detalhado -->
+                            ${state.userProfile.name ? `<div class="text-sm text-center font-bold text-gray-400 -mt-2">${state.userProfile.name}</div>` : ''}
+                            ${state.target > 0 ? `
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-500 font-bold">Alvo</span>
+                                    <span class="text-xl font-black ${s.hoursLeft <= 0 ? 'text-green-600' : 'text-blue-600'}">
+                                        ${state.target}h (${s.hoursLeft <= 0 ? 'Concluído' : `${s.hoursLeft}h restantes`})
+                                    </span>
+                                </div>
+                            ` : ''}
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-500 font-bold">Revisitas</span>
+                                <span class="text-3xl font-black text-gray-900">${s.rvs}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-500 font-bold">Estudos</span>
+                                <span class="text-3xl font-black text-red-500">${s.studies}</span>
+                            </div>
+                            <button onclick="generateReport()" class="w-full bg-black text-white py-5 rounded-[22px] font-bold btn-active mt-4">
+                                Enviar Relatório
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        };
+
+        // Função para gerar relatório
+        window.generateReport = () => {
+            const s = getStats();
+            const now = new Date();
+            const reportDate = new Intl.DateTimeFormat('pt-BR', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric'
+            }).format(now);
+
+            let reportText = `📊 RELATÓRIO DE MINISTÉRIO - ${s.monthName.toUpperCase()}\n`;
+            reportText += `📅 ${reportDate}\n\n`;
+            reportText += `⏰ TEMPO TOTAL: ${s.h}h ${s.m}m\n`;
+
+            if (state.target > 0) {
+                reportText += `🎯 ALVO: ${state.target}h\n`;
+                reportText += `📈 PROGRESSO: ${s.progress.toFixed(0)}%\n`;
+                reportText += `⏱️ RESTANTE: ${s.hoursLeft}h\n`;
+                reportText += `📅 DIAS RESTANTES: ${s.daysLeft}\n`;
+                reportText += `📊 MÉDIA POR DIA: ${s.suggestion}h\n`;
+            }
+
+            reportText += `\n👥 CONTATOS:\n`;
+            reportText += `✅ REVISITAS: ${s.rvs}\n`;
+            reportText += `📚 ESTUDOS BÍBLICOS: ${s.studies}\n`;
+
+            // Tentar copiar para área de transferência
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(reportText).then(() => {
+                    alert('Relatório copiado para a área de transferência! Cole no WhatsApp ou em outro app para enviar.');
+                }).catch(() => {
+                    alert('Relatório pronto para enviar:\n\n' + reportText);
+                });
+            } else {
+                alert('Relatório pronto para enviar:\n\n' + reportText);
+            }
+        };
+
+        // Função para editar contato
+        window.editContact = (contactId) => {
+            const contact = state.contacts.find(c => c.id == contactId);
+            if (!contact) return;
+
+            state.tempContactType = contact.type;
+            state.tempSubject = contact.subject || '';
+            state.selectedContact = contact;
+
+            const overlayContainer = document.getElementById('overlays');
+            overlayContainer.innerHTML = `
+                <div class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
+                    <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-slide-up">
+                        <div class="flex justify-between items-center mb-6">
+                            <div>
+                                <h3 class="text-2xl font-black text-gray-900">Editar Interessado</h3>
+                                <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Atualizar informações</p>
+                            </div>
+                            <button onclick="document.getElementById('overlays').innerHTML=''; render();" class="text-gray-400 bg-gray-50 p-2 rounded-full"><i data-lucide="x"></i></button>
+                        </div>
+                        <form onsubmit="updateContact(event, ${contactId})" class="space-y-4">
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-gray-500 uppercase ml-1">Nome *</label>
+                                <input name="name" required value="${contact.name}" placeholder="Nome do morador" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 focus:ring-2 focus:ring-blue-500 transition-all" />
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-gray-500 uppercase ml-1">Endereço</label>
+                                <input name="address" value="${contact.address || ''}" placeholder="Rua, número, bairro..." class="w-full bg-gray-50 p-4 rounded-2xl font-semibold text-gray-900 focus:ring-2 focus:ring-blue-500 transition-all" />
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-gray-500 uppercase ml-1">Assunto/Matéria</label>
+                                <input 
+                                    name="subject"
+                                    value="${contact.subject || ''}"
+                                    placeholder="Ex: Esperança para os mortos, Paraíso, etc."
+                                    class="w-full bg-gray-50 p-4 rounded-2xl font-semibold text-gray-900 focus:ring-2 focus:ring-blue-500 transition-all" 
+                                />
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-gray-500 uppercase ml-1">Notas Adicionais</label>
+                                <textarea 
+                                    name="notes"
+                                    placeholder="Observações, informações de contato, etc."
+                                    rows="2"
+                                    class="w-full bg-gray-50 p-4 rounded-2xl font-semibold text-gray-900 focus:ring-2 focus:ring-blue-500 transition-all resize-none"
+                                >${contact.notes || ''}</textarea>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3 pt-2" id="contact-type-buttons">
+                                <button type="button" onclick="state.tempContactType='rv'; document.querySelectorAll('#contact-type-buttons button').forEach(b => b.classList.remove('border-green-500', 'bg-green-50', 'text-green-700', 'border-red-500', 'bg-red-50', 'text-red-700')); this.classList.add('border-green-500', 'bg-green-50', 'text-green-700');" class="p-4 rounded-2xl font-bold border-2 transition-all ${contact.type === 'rv' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-100 text-gray-400'}">
+                                    Revisita
+                                </button>
+                                <button type="button" onclick="state.tempContactType='study'; document.querySelectorAll('#contact-type-buttons button').forEach(b => b.classList.remove('border-green-500', 'bg-green-50', 'text-green-700', 'border-red-500', 'bg-red-50', 'text-red-700')); this.classList.add('border-red-500', 'bg-red-50', 'text-red-700');" class="p-4 rounded-2xl font-bold border-2 transition-all ${contact.type === 'study' ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-100 text-gray-400'}">
+                                    Estudo
+                                </button>
+                            </div>
+
+                            <div class="flex gap-3 pt-2">
+                                <button type="submit" class="flex-1 bg-blue-600 text-white py-4 rounded-[18px] font-bold shadow-lg shadow-blue-200 active:scale-95 transition-all">
+                                    Atualizar
+                                </button>
+                                <button type="button" onclick="document.getElementById('overlays').innerHTML=''; render();" class="flex-1 bg-gray-100 text-gray-600 py-4 rounded-[18px] font-bold active:scale-95 transition-all">
+                                    Cancelar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        };
+
+        window.updateContact = (e, contactId) => {
+            e.preventDefault();
+            const form = e.target;
+            const contactIndex = state.contacts.findIndex(c => c.id == contactId);
+
+            if (contactIndex !== -1) {
+                state.contacts[contactIndex] = {
+                    ...state.contacts[contactIndex],
+                    name: form.name.value,
+                    address: form.address.value,
+                    type: state.tempContactType,
+                    subject: form.subject.value || '',
+                    notes: form.notes ? form.notes.value : ''
+                };
+
+                save();
+                document.getElementById('overlays').innerHTML = '';
+                state.selectedContact = state.contacts[contactIndex];
+                render();
+            }
+        };
+
+        const render = () => {
+            const container = document.getElementById('app');
+            const overlayContainer = document.getElementById('overlays');
+
+            let content = '';
+            if (state.activeTab === 'dashboard') content = ViewDashboard();
+            else if (state.activeTab === 'contacts') content = ViewContacts();
+            else if (state.activeTab === 'history') content = ViewHistory();
+            else if (state.activeTab === 'report') content = ViewReport();
+            else content = `<div class="p-20 text-center text-gray-400">Em desenvolvimento...</div>`;
+
+            // Insert Timer Banner if active
+            const timerBanner = ViewTimerBanner();
+
+            container.innerHTML = `
+                ${timerBanner}
+                <div class="content-area no-scrollbar">
+                    ${content}
+                </div>
+
+                ${!state.viewingContactDetail ? `
+                <nav class="tab-bar fixed bottom-0 left-0 right-0 ios-blur border-t border-gray-200 flex justify-around items-center px-4 z-40">
+                    <button onclick="switchTab('dashboard')" class="flex flex-col items-center gap-1 ${state.activeTab === 'dashboard' ? 'text-blue-500' : 'text-gray-400'}">
+                        <i data-lucide="layout-dashboard"></i>
+                        <span class="text-[9px] font-bold uppercase tracking-tighter">Início</span>
+                    </button>
+                    <button onclick="switchTab('contacts')" class="flex flex-col items-center gap-1 ${state.activeTab === 'contacts' ? 'text-blue-500' : 'text-gray-400'}">
+                        <i data-lucide="users"></i>
+                        <span class="text-[9px] font-bold uppercase tracking-tighter">Interessados</span>
+                    </button>
+                    <button onclick="switchTab('history')" class="flex flex-col items-center gap-1 ${state.activeTab === 'history' ? 'text-blue-500' : 'text-gray-400'}">
+                        <i data-lucide="history"></i>
+                        <span class="text-[9px] font-bold uppercase tracking-tighter">Histórico</span>
+                    </button>
+                    <button onclick="switchTab('report')" class="flex flex-col items-center gap-1 ${state.activeTab === 'report' ? 'text-blue-500' : 'text-gray-400'}">
+                        <i data-lucide="file-text"></i>
+                        <span class="text-[9px] font-bold uppercase tracking-tighter">Relatório</span>
+                    </button>
+                </nav>
+                ` : ''}
+            `;
+
+            // Render Modals
+            let overlays = '';
+
+            // TARGET MODAL
+            if (state.modals.target) {
+                overlays += `
+                    <div class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
+                        <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-slide-up">
+                            <div class="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 class="text-2xl font-black text-gray-900">Definir Alvo Mensal</h3>
+                                    <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Selecione seu objetivo</p>
+                                </div>
+                                <button onclick="toggleTargetModal()" class="text-gray-400 bg-gray-50 p-2 rounded-full"><i data-lucide="x"></i></button>
+                            </div>
+                            <div class="grid grid-cols-3 gap-3">
+                                ${[15, 30, 50].map(v => `
+                                    <button onclick="setTarget(${v})" class="py-6 rounded-2xl font-black ${state.target === v ? 'bg-blue-500 text-white' : 'bg-gray-50 text-gray-600 hover:bg-blue-50 hover:text-blue-600'} transition-all">
+                                        <div class="text-2xl">${v}</div>
+                                        <div class="text-xs mt-1 opacity-70">horas</div>
+                                    </button>
+                                `).join('')}
+                                <button onclick="setTarget(0)" class="col-span-3 py-4 text-gray-400 font-bold border border-gray-100 rounded-2xl hover:bg-gray-50 transition-all mt-2">
+                                    <i data-lucide="x-circle" class="inline mr-2" size="16"></i> Sem Alvo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // PROFILE MODAL
+            if (state.modals.profile) {
+                const now = new Date();
+                const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                const auxActiveThisMonth = state.userProfile.auxMonths.includes(monthKey);
+                const auxSpecialThisMonth = state.userProfile.auxSpecialMonths.includes(monthKey);
+
+                overlays += `
+                    <div class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
+                        <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-slide-up max-h-[90vh] overflow-y-auto">
+                            <div class="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 class="text-2xl font-black text-gray-900">Perfil</h3>
+                                    <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Suas informações</p>
+                                </div>
+                                <button onclick="toggleProfileModal()" class="text-gray-400 bg-gray-50 p-2 rounded-full"><i data-lucide="x"></i></button>
+                            </div>
+                            
+                            <form onsubmit="saveProfile(event)" class="space-y-5">
+                                <div class="space-y-1">
+                                    <label class="text-xs font-bold text-gray-500 uppercase ml-1">Seu Nome</label>
+                                    <input name="name" value="${state.userProfile.name}" placeholder="Seu nome" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none" />
+                                </div>
+                                
+                                <div class="space-y-3">
+                                    <label class="text-xs font-bold text-gray-500 uppercase ml-1">Modalidade</label>
+                                    
+                                    <div class="grid grid-cols-1 gap-2">
+                                        <label class="flex items-center gap-3 p-4 border rounded-2xl cursor-pointer hover:bg-gray-50 ${state.userProfile.role === 'publisher' ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : 'border-gray-200'}">
+                                            <input type="radio" name="role" value="publisher" onchange="state.userProfile.role=this.value; render()" ${state.userProfile.role === 'publisher' ? 'checked' : ''} class="w-5 h-5 text-blue-600">
+                                            <div>
+                                                <div class="font-bold text-gray-900">Publicador</div>
+                                                <div class="text-xs text-gray-400">Sem obrigação de horas</div>
+                                            </div>
+                                        </label>
+                                        
+                                        <label class="flex items-center gap-3 p-4 border rounded-2xl cursor-pointer hover:bg-gray-50 ${state.userProfile.role === 'aux' ? 'border-green-500 bg-green-50 ring-1 ring-green-500' : 'border-gray-200'}">
+                                            <input type="radio" name="role" value="aux" onchange="state.userProfile.role=this.value; render()" ${state.userProfile.role === 'aux' ? 'checked' : ''} class="w-5 h-5 text-green-600">
+                                            <div>
+                                                <div class="font-bold text-gray-900">Pioneiro Auxiliar</div>
+                                                <div class="text-xs text-gray-400">Alvo de 30h ou 15h</div>
+                                            </div>
+                                        </label>
+                                        
+                                        <label class="flex items-center gap-3 p-4 border rounded-2xl cursor-pointer hover:bg-gray-50 ${state.userProfile.role === 'regular' ? 'border-yellow-500 bg-yellow-50 ring-1 ring-yellow-500' : 'border-gray-200'}">
+                                            <input type="radio" name="role" value="regular" onchange="state.userProfile.role=this.value; render()" ${state.userProfile.role === 'regular' ? 'checked' : ''} class="w-5 h-5 text-yellow-600">
+                                            <div>
+                                                <div class="font-bold text-gray-900">Pioneiro Regular</div>
+                                                <div class="text-xs text-gray-400">Alvo anual de 600h</div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div id="aux-options" class="${state.userProfile.role === 'aux' ? 'block' : 'hidden'} space-y-4 bg-gray-50 p-4 rounded-2xl">
+                                    <div class="flex items-center justify-between">
+                                        <label class="text-sm font-bold text-gray-700">Indeterminado?</label>
+                                        <input type="checkbox" name="auxIndefinite" ${state.userProfile.auxIndefinite ? 'checked' : ''} class="w-5 h-5 rounded text-green-600">
+                                    </div>
+                                    <hr class="border-gray-200">
+                                    <div class="text-xs font-bold text-gray-400 uppercase">Mês Atual:</div>
+                                    <label class="flex items-center gap-2">
+                                        <input type="checkbox" name="auxThisMonth" ${auxActiveThisMonth ? 'checked' : ''} class="w-5 h-5 rounded text-green-600">
+                                        <span class="text-sm font-medium">Sou Auxiliar este mês</span>
+                                    </label>
+                                    <label class="flex items-center gap-2">
+                                        <input type="checkbox" name="auxSpecial" ${auxSpecialThisMonth ? 'checked' : ''} class="w-5 h-5 rounded text-green-600">
+                                        <span class="text-sm font-medium">Campanha Especial (15h)</span>
+                                    </label>
+                                </div>
+
+                                <button type="submit" class="w-full bg-black text-white py-4 rounded-[18px] font-bold shadow-lg shadow-gray-200 active:scale-95 transition-all">
+                                    Salvar Perfil
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // BACKUP LOADING MODAL (Not implemented but good to have)
+            // BACKUP MODAL
+            if (state.modals.backup) {
+                overlays += `
+                    <div class="fixed inset-0 backup-modal z-[100] flex items-center justify-center p-6">
+                        <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-slide-up">
+                            <div class="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 class="text-2xl font-black text-gray-900">Backup de Dados</h3>
+                                    <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Salvar ou restaurar informações</p>
+                                </div>
+                                <button onclick="closeBackupModal()" class="text-gray-400 bg-gray-50 p-2 rounded-full"><i data-lucide="x"></i></button>
+                            </div>
+                            
+                            <div class="space-y-4">
+                                <div class="bg-gray-50 p-4 rounded-2xl">
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <p class="text-xs font-bold text-gray-400 uppercase mb-1">Registros</p>
+                                            <p class="text-lg font-black text-gray-900">${state.entries.length}</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs font-bold text-gray-400 uppercase mb-1">Interessados</p>
+                                            <p class="text-lg font-black text-gray-900">${state.contacts.length}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="space-y-3">
+                                    <button onclick="createBackup()" class="w-full bg-blue-600 text-white py-4 rounded-[18px] font-bold shadow-lg shadow-blue-200 active:scale-95 transition-all flex items-center justify-center gap-2">
+                                        <i data-lucide="download-cloud" size="18"></i> Criar Backup
+                                    </button>
+                                    <button onclick="openRestoreModal()" class="w-full bg-gray-100 text-gray-600 py-4 rounded-[18px] font-bold border border-gray-200 active:scale-95 transition-all flex items-center justify-center gap-2">
+                                        <i data-lucide="upload-cloud" size="18"></i> Restaurar Backup
+                                    </button>
+                                    <button onclick="if(confirm('Tem certeza que deseja limpar todos os dados?')) { localStorage.clear(); location.reload(); }" class="w-full bg-red-50 text-red-600 py-4 rounded-[18px] font-bold border border-red-100 active:scale-95 transition-all flex items-center justify-center gap-2">
+                                        <i data-lucide="trash-2" size="18"></i> Limpar Dados
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // RESTORE MODAL
+            if (state.modals.restore) {
+                overlays += `
+                    <div class="fixed inset-0 backup-modal z-[100] flex items-center justify-center p-6">
+                        <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-slide-up">
+                            <div class="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 class="text-2xl font-black text-gray-900">Restaurar Backup</h3>
+                                    <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Selecione o arquivo</p>
+                                </div>
+                                <button onclick="closeRestoreModal()" class="text-gray-400 bg-gray-50 p-2 rounded-full"><i data-lucide="x"></i></button>
+                            </div>
+                            <div class="space-y-6">
+                                <div class="border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center">
+                                    <div class="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                                        <i data-lucide="upload" class="text-gray-400" size="24"></i>
+                                    </div>
+                                    <label class="bg-blue-600 text-white px-6 py-3 rounded-[18px] font-bold inline-block cursor-pointer hover:bg-blue-700 transition-colors">
+                                        <input type="file" accept=".json" onchange="restoreBackup(event)" class="hidden" />
+                                        Selecionar Arquivo
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // MANUAL ENTRY MODAL
+            if (state.modals.manualEntry) {
+                const isEditing = state.tempManualEntry.editingId;
+                const modalTitle = isEditing ? 'Editar Registro' : 'Novo Registro';
+                const formAction = isEditing ? `updateManualEntry(event, ${state.tempManualEntry.editingId})` : 'saveManualEntry(event)';
+
+                overlays += `
+                    <div class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
+                        <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-slide-up">
+                            <div class="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 class="text-2xl font-black text-gray-900">${modalTitle}</h3>
+                                    <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Adicionar horas</p>
+                                </div>
+                                <button onclick="closeManualEntryModal()" class="text-gray-400 bg-gray-50 p-2 rounded-full"><i data-lucide="x"></i></button>
+                            </div>
+                            <form onsubmit="${formAction}" class="space-y-4">
+                                <div class="space-y-1">
+                                    <label class="text-xs font-bold text-gray-500 uppercase ml-1">Data</label>
+                                    <input type="date" name="date" required value="${state.tempManualEntry.date}" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 outline-none" lang="pt-BR">
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="space-y-1">
+                                        <label class="text-xs font-bold text-gray-500 uppercase ml-1">Horas</label>
+                                        <input type="number" name="hours" min="0" max="24" value="${state.tempManualEntry.hours}" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 text-center outline-none">
+                                    </div>
+                                    <div class="space-y-1">
+                                        <label class="text-xs font-bold text-gray-500 uppercase ml-1">Minutos</label>
+                                        <input type="number" name="minutes" min="0" max="59" value="${state.tempManualEntry.minutes}" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 text-center outline-none">
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="space-y-1">
+                                        <label class="text-xs font-bold text-gray-500 uppercase ml-1">RVs</label>
+                                        <input type="number" name="rvs" min="0" value="${state.tempManualEntry.rvs}" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 text-center outline-none">
+                                    </div>
+                                    <div class="space-y-1">
+                                        <label class="text-xs font-bold text-gray-500 uppercase ml-1">Estudos</label>
+                                        <input type="number" name="studies" min="0" value="${state.tempManualEntry.studies}" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 text-center outline-none">
+                                    </div>
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-xs font-bold text-gray-500 uppercase ml-1">Notas</label>
+                                    <textarea name="notes" rows="2" class="w-full bg-gray-50 p-4 rounded-2xl font-semibold text-gray-900 outline-none resize-none">${state.tempManualEntry.notes}</textarea>
+                                </div>
+                                <button type="submit" class="w-full bg-blue-600 text-white py-4 rounded-[18px] font-bold shadow-lg shadow-blue-200 active:scale-95 transition-all">
+                                    Salvar
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // VISIT MODAL
+            if (state.modals.visit) {
+                overlays += `
+                    <div class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
+                        <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-slide-up">
+                            <div class="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 class="text-2xl font-black text-gray-900">Nova Visita</h3>
+                                    <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Registrar interação</p>
+                                </div>
+                                <button onclick="closeVisitModal()" class="text-gray-400 bg-gray-50 p-2 rounded-full"><i data-lucide="x"></i></button>
+                            </div>
+                            <form onsubmit="saveVisit(event)" class="space-y-4">
+                                <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                                    <div class="text-xs font-bold text-gray-400 uppercase mb-1">Data</div>
+                                    <input type="date" name="date" required value="${state.tempVisit.date}" class="w-full bg-transparent font-bold text-gray-900 outline-none">
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-xs font-bold text-gray-500 uppercase ml-1">Notas</label>
+                                    <textarea name="notes" rows="2" placeholder="O que foi considerado..." class="w-full bg-gray-50 p-3 rounded-xl font-medium text-gray-900 outline-none resize-none"></textarea>
+                                </div>
+                                <div class="border-t border-gray-100 pt-4 mt-2">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <i data-lucide="calendar-clock" class="text-blue-500" size="16"></i>
+                                        <span class="font-bold text-sm text-gray-900">Próxima Visita</span>
+                                    </div>
+                                    <div class="flex gap-2 mb-2">
+                                         <div class="bg-blue-50 p-3 rounded-xl border border-blue-100 flex-1">
+                                            <input type="date" name="nextVisitDate" class="w-full bg-transparent font-bold text-blue-900 outline-none text-sm">
+                                        </div>
+                                    </div>
+                                    <div class="bg-blue-50 p-3 rounded-xl border border-blue-100">
+                                        <input name="nextVisitNotes" placeholder="O que tratar..." class="w-full bg-transparent font-medium text-blue-900 outline-none text-sm">
+                                    </div>
+                                </div>
+                                <button type="submit" class="w-full bg-blue-600 text-white py-4 rounded-[18px] font-bold shadow-lg shadow-blue-200 active:scale-95 transition-all mt-2">
+                                    Salvar Visita
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                 `;
+            }
+
+            // CONTACT MODAL
+            if (state.modals.contact) {
+                overlays += `
+                    <div class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
+                        <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-slide-up">
+                            <div class="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 class="text-2xl font-black text-gray-900">Novo Interessado</h3>
+                                    <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Adicionar aos registros</p>
+                                </div>
+                                <button onclick="closeContactModal()" class="text-gray-400 bg-gray-50 p-2 rounded-full"><i data-lucide="x"></i></button>
+                            </div>
+                            <form onsubmit="saveContact(event)" class="space-y-4">
+                                <div class="space-y-1">
+                                    <label class="text-xs font-bold text-gray-500 uppercase ml-1">Nome *</label>
+                                    <input name="name" required placeholder="Nome do morador" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 focus:ring-2 focus:ring-blue-500 transition-all" />
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-xs font-bold text-gray-500 uppercase ml-1">Endereço</label>
+                                    <input name="address" placeholder="Rua, número, bairro..." class="w-full bg-gray-50 p-4 rounded-2xl font-semibold text-gray-900 focus:ring-2 focus:ring-blue-500 transition-all" />
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-xs font-bold text-gray-500 uppercase ml-1">Assunto/Matéria</label>
+                                    <input value="${state.tempSubject || ''}" oninput="state.tempSubject = this.value" placeholder="Ex: Esperança..." class="w-full bg-gray-50 p-4 rounded-2xl font-semibold text-gray-900 focus:ring-2 focus:ring-blue-500 transition-all" />
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-xs font-bold text-gray-500 uppercase ml-1">Notas</label>
+                                    <textarea name="notes" placeholder="Observações..." rows="2" class="w-full bg-gray-50 p-4 rounded-2xl font-semibold text-gray-900 focus:ring-2 focus:ring-blue-500 transition-all resize-none"></textarea>
+                                </div>
+                                <div class="grid grid-cols-2 gap-3 pt-2">
+                                    <button type="button" onclick="state.tempContactType='rv'; render()" class="p-4 rounded-2xl font-bold border-2 transition-all ${state.tempContactType === 'rv' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-100 text-gray-400'}">Revisita</button>
+                                    <button type="button" onclick="state.tempContactType='study'; render()" class="p-4 rounded-2xl font-bold border-2 transition-all ${state.tempContactType === 'study' ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-100 text-gray-400'}">Estudo</button>
+                                </div>
+                                <button type="submit" class="w-full bg-blue-600 text-white py-5 rounded-[22px] font-bold shadow-lg shadow-blue-200 active:scale-95 transition-all mt-4">
+                                    Salvar Interessado
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                `;
+            }
+
+            overlayContainer.innerHTML = overlays;
+
+            // Icon initialization and Date fixes
+            lucide.createIcons();
+            setTimeout(() => {
+                document.querySelectorAll('input[type="date"]').forEach(input => {
+                    input.setAttribute('lang', 'pt-BR');
+                });
+            }, 100);
+        };
+
+
+        // Inicialização
+        render();
+    </script>
+</body>
+
+</html>

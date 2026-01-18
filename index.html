@@ -519,6 +519,7 @@
 
             state.modals.profile = false;
             save();
+            alert('Perfil salvo com sucesso!');
             render();
         }
 
@@ -806,11 +807,6 @@
                             <h1 class="text-4xl font-black capitalize text-gray-900">${s.monthName}</h1>
                         </div>
                         <div class="flex gap-2">
-                             <button onclick="toggleProfileModal()" class="bg-white p-3 rounded-2xl shadow-sm text-blue-500 btn-active relative">
-                                <i data-lucide="user-circle"></i>
-                                ${state.userProfile.role !== 'publisher' ?
-                    '<div class="absolute top-2 right-2 w-2 h-2 bg-red-400 rounded-full"></div>' : ''}
-                            </button>
                             <button onclick="toggleTargetModal()" class="bg-white p-3 rounded-2xl shadow-sm text-blue-500 btn-active">
                                 <i data-lucide="target"></i>
                             </button>
@@ -1339,6 +1335,7 @@
             else if (state.activeTab === 'contacts') content = ViewContacts();
             else if (state.activeTab === 'history') content = ViewHistory();
             else if (state.activeTab === 'report') content = ViewReport();
+            else if (state.activeTab === 'profile') content = ViewProfile();
             else content = `<div class="p-20 text-center text-gray-400">Em desenvolvimento...</div>`;
 
             // Insert Timer Banner if active
@@ -1363,6 +1360,10 @@
                     <button onclick="switchTab('history')" class="flex flex-col items-center gap-1 ${state.activeTab === 'history' ? 'text-blue-500' : 'text-gray-400'}">
                         <i data-lucide="history"></i>
                         <span class="text-[9px] font-bold uppercase tracking-tighter">Histórico</span>
+                    </button>
+                    <button onclick="switchTab('profile')" class="flex flex-col items-center gap-1 ${state.activeTab === 'profile' ? 'text-blue-500' : 'text-gray-400'}">
+                        <i data-lucide="user"></i>
+                        <span class="text-[9px] font-bold uppercase tracking-tighter">Perfil</span>
                     </button>
                     <button onclick="switchTab('report')" class="flex flex-col items-center gap-1 ${state.activeTab === 'report' ? 'text-blue-500' : 'text-gray-400'}">
                         <i data-lucide="file-text"></i>
@@ -1403,28 +1404,25 @@
                 `;
             }
 
-            // PROFILE MODAL
-            if (state.modals.profile) {
+
+            const ViewProfile = () => {
                 const now = new Date();
-                const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                const monthKey = `${now.getFullYear()} -${String(now.getMonth() + 1).padStart(2, '0')} `;
                 const auxActiveThisMonth = state.userProfile.auxMonths.includes(monthKey);
                 const auxSpecialThisMonth = state.userProfile.auxSpecialMonths.includes(monthKey);
 
-                overlays += `
-                    <div class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
-                        <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-slide-up max-h-[90vh] overflow-y-auto">
-                            <div class="flex justify-between items-center mb-6">
-                                <div>
-                                    <h3 class="text-2xl font-black text-gray-900">Perfil</h3>
-                                    <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Suas informações</p>
-                                </div>
-                                <button onclick="toggleProfileModal()" class="text-gray-400 bg-gray-50 p-2 rounded-full"><i data-lucide="x"></i></button>
-                            </div>
-                            
+                return `
+                < div class="p-6 space-y-6 animate-slide-up pb-32" >
+                        <header class="pt-8">
+                            <h1 class="text-3xl font-black text-gray-900">Perfil</h1>
+                            <p class="text-sm text-gray-400 font-medium">Suas informações</p>
+                        </header>
+                        
+                         <div class="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100">
                             <form onsubmit="saveProfile(event)" class="space-y-5">
                                 <div class="space-y-1">
                                     <label class="text-xs font-bold text-gray-500 uppercase ml-1">Seu Nome</label>
-                                    <input name="name" value="${state.userProfile.name}" placeholder="Seu nome" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none" />
+                                    <input name="name" value="${state.userProfile.name}" placeholder="Seu nome" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none transition-all" />
                                 </div>
                                 
                                 <div class="space-y-3">
@@ -1475,84 +1473,84 @@
                                 </div>
 
                                 <button type="submit" class="w-full bg-black text-white py-4 rounded-[18px] font-bold shadow-lg shadow-gray-200 active:scale-95 transition-all">
-                                    Salvar Perfil
+                                    Salvar Alterações
                                 </button>
                             </form>
                         </div>
-                    </div>
-                `;
-            }
+                    </div >
+            `;
+            };
 
             // BACKUP LOADING MODAL (Not implemented but good to have)
             // BACKUP MODAL
             if (state.modals.backup) {
                 overlays += `
-                    <div class="fixed inset-0 backup-modal z-[100] flex items-center justify-center p-6">
-                        <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-slide-up">
-                            <div class="flex justify-between items-center mb-6">
+            < div class="fixed inset-0 backup-modal z-[100] flex items-center justify-center p-6" >
+                <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-slide-up">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h3 class="text-2xl font-black text-gray-900">Backup de Dados</h3>
+                            <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Salvar ou restaurar informações</p>
+                        </div>
+                        <button onclick="closeBackupModal()" class="text-gray-400 bg-gray-50 p-2 rounded-full"><i data-lucide="x"></i></button>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="bg-gray-50 p-4 rounded-2xl">
+                            <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <h3 class="text-2xl font-black text-gray-900">Backup de Dados</h3>
-                                    <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Salvar ou restaurar informações</p>
+                                    <p class="text-xs font-bold text-gray-400 uppercase mb-1">Registros</p>
+                                    <p class="text-lg font-black text-gray-900">${state.entries.length}</p>
                                 </div>
-                                <button onclick="closeBackupModal()" class="text-gray-400 bg-gray-50 p-2 rounded-full"><i data-lucide="x"></i></button>
-                            </div>
-                            
-                            <div class="space-y-4">
-                                <div class="bg-gray-50 p-4 rounded-2xl">
-                                    <div class="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <p class="text-xs font-bold text-gray-400 uppercase mb-1">Registros</p>
-                                            <p class="text-lg font-black text-gray-900">${state.entries.length}</p>
-                                        </div>
-                                        <div>
-                                            <p class="text-xs font-bold text-gray-400 uppercase mb-1">Interessados</p>
-                                            <p class="text-lg font-black text-gray-900">${state.contacts.length}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="space-y-3">
-                                    <button onclick="createBackup()" class="w-full bg-blue-600 text-white py-4 rounded-[18px] font-bold shadow-lg shadow-blue-200 active:scale-95 transition-all flex items-center justify-center gap-2">
-                                        <i data-lucide="download-cloud" size="18"></i> Criar Backup
-                                    </button>
-                                    <button onclick="openRestoreModal()" class="w-full bg-gray-100 text-gray-600 py-4 rounded-[18px] font-bold border border-gray-200 active:scale-95 transition-all flex items-center justify-center gap-2">
-                                        <i data-lucide="upload-cloud" size="18"></i> Restaurar Backup
-                                    </button>
-                                    <button onclick="if(confirm('Tem certeza que deseja limpar todos os dados?')) { localStorage.clear(); location.reload(); }" class="w-full bg-red-50 text-red-600 py-4 rounded-[18px] font-bold border border-red-100 active:scale-95 transition-all flex items-center justify-center gap-2">
-                                        <i data-lucide="trash-2" size="18"></i> Limpar Dados
-                                    </button>
+                                <div>
+                                    <p class="text-xs font-bold text-gray-400 uppercase mb-1">Interessados</p>
+                                    <p class="text-lg font-black text-gray-900">${state.contacts.length}</p>
                                 </div>
                             </div>
                         </div>
+                        <div class="space-y-3">
+                            <button onclick="createBackup()" class="w-full bg-blue-600 text-white py-4 rounded-[18px] font-bold shadow-lg shadow-blue-200 active:scale-95 transition-all flex items-center justify-center gap-2">
+                                <i data-lucide="download-cloud" size="18"></i> Criar Backup
+                            </button>
+                            <button onclick="openRestoreModal()" class="w-full bg-gray-100 text-gray-600 py-4 rounded-[18px] font-bold border border-gray-200 active:scale-95 transition-all flex items-center justify-center gap-2">
+                                <i data-lucide="upload-cloud" size="18"></i> Restaurar Backup
+                            </button>
+                            <button onclick="if(confirm('Tem certeza que deseja limpar todos os dados?')) { localStorage.clear(); location.reload(); }" class="w-full bg-red-50 text-red-600 py-4 rounded-[18px] font-bold border border-red-100 active:scale-95 transition-all flex items-center justify-center gap-2">
+                                <i data-lucide="trash-2" size="18"></i> Limpar Dados
+                            </button>
+                        </div>
                     </div>
-                `;
+                </div>
+                    </div >
+            `;
             }
 
             // RESTORE MODAL
             if (state.modals.restore) {
                 overlays += `
-                    <div class="fixed inset-0 backup-modal z-[100] flex items-center justify-center p-6">
-                        <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-slide-up">
-                            <div class="flex justify-between items-center mb-6">
-                                <div>
-                                    <h3 class="text-2xl font-black text-gray-900">Restaurar Backup</h3>
-                                    <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Selecione o arquivo</p>
-                                </div>
-                                <button onclick="closeRestoreModal()" class="text-gray-400 bg-gray-50 p-2 rounded-full"><i data-lucide="x"></i></button>
+            < div class="fixed inset-0 backup-modal z-[100] flex items-center justify-center p-6" >
+                <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-slide-up">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h3 class="text-2xl font-black text-gray-900">Restaurar Backup</h3>
+                            <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Selecione o arquivo</p>
+                        </div>
+                        <button onclick="closeRestoreModal()" class="text-gray-400 bg-gray-50 p-2 rounded-full"><i data-lucide="x"></i></button>
+                    </div>
+                    <div class="space-y-6">
+                        <div class="border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center">
+                            <div class="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                                <i data-lucide="upload" class="text-gray-400" size="24"></i>
                             </div>
-                            <div class="space-y-6">
-                                <div class="border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center">
-                                    <div class="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                                        <i data-lucide="upload" class="text-gray-400" size="24"></i>
-                                    </div>
-                                    <label class="bg-blue-600 text-white px-6 py-3 rounded-[18px] font-bold inline-block cursor-pointer hover:bg-blue-700 transition-colors">
-                                        <input type="file" accept=".json" onchange="restoreBackup(event)" class="hidden" />
-                                        Selecionar Arquivo
-                                    </label>
-                                </div>
-                            </div>
+                            <label class="bg-blue-600 text-white px-6 py-3 rounded-[18px] font-bold inline-block cursor-pointer hover:bg-blue-700 transition-colors">
+                                <input type="file" accept=".json" onchange="restoreBackup(event)" class="hidden" />
+                                Selecionar Arquivo
+                            </label>
                         </div>
                     </div>
-                `;
+                </div>
+                    </div >
+            `;
             }
 
             // MANUAL ENTRY MODAL
@@ -1562,136 +1560,136 @@
                 const formAction = isEditing ? `updateManualEntry(event, ${state.tempManualEntry.editingId})` : 'saveManualEntry(event)';
 
                 overlays += `
-                    <div class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
-                        <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-slide-up">
-                            <div class="flex justify-between items-center mb-6">
-                                <div>
-                                    <h3 class="text-2xl font-black text-gray-900">${modalTitle}</h3>
-                                    <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Adicionar horas</p>
-                                </div>
-                                <button onclick="closeManualEntryModal()" class="text-gray-400 bg-gray-50 p-2 rounded-full"><i data-lucide="x"></i></button>
-                            </div>
-                            <form onsubmit="${formAction}" class="space-y-4">
-                                <div class="space-y-1">
-                                    <label class="text-xs font-bold text-gray-500 uppercase ml-1">Data</label>
-                                    <input type="date" name="date" required value="${state.tempManualEntry.date}" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 outline-none" lang="pt-BR">
-                                </div>
-                                <div class="grid grid-cols-2 gap-3">
-                                    <div class="space-y-1">
-                                        <label class="text-xs font-bold text-gray-500 uppercase ml-1">Horas</label>
-                                        <input type="number" name="hours" min="0" max="24" value="${state.tempManualEntry.hours}" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 text-center outline-none">
-                                    </div>
-                                    <div class="space-y-1">
-                                        <label class="text-xs font-bold text-gray-500 uppercase ml-1">Minutos</label>
-                                        <input type="number" name="minutes" min="0" max="59" value="${state.tempManualEntry.minutes}" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 text-center outline-none">
-                                    </div>
-                                </div>
-                                <div class="grid grid-cols-2 gap-3">
-                                    <div class="space-y-1">
-                                        <label class="text-xs font-bold text-gray-500 uppercase ml-1">RVs</label>
-                                        <input type="number" name="rvs" min="0" value="${state.tempManualEntry.rvs}" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 text-center outline-none">
-                                    </div>
-                                    <div class="space-y-1">
-                                        <label class="text-xs font-bold text-gray-500 uppercase ml-1">Estudos</label>
-                                        <input type="number" name="studies" min="0" value="${state.tempManualEntry.studies}" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 text-center outline-none">
-                                    </div>
-                                </div>
-                                <div class="space-y-1">
-                                    <label class="text-xs font-bold text-gray-500 uppercase ml-1">Notas</label>
-                                    <textarea name="notes" rows="2" class="w-full bg-gray-50 p-4 rounded-2xl font-semibold text-gray-900 outline-none resize-none">${state.tempManualEntry.notes}</textarea>
-                                </div>
-                                <button type="submit" class="w-full bg-blue-600 text-white py-4 rounded-[18px] font-bold shadow-lg shadow-blue-200 active:scale-95 transition-all">
-                                    Salvar
-                                </button>
-                            </form>
+            < div class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6" >
+                <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-slide-up">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h3 class="text-2xl font-black text-gray-900">${modalTitle}</h3>
+                            <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Adicionar horas</p>
                         </div>
+                        <button onclick="closeManualEntryModal()" class="text-gray-400 bg-gray-50 p-2 rounded-full"><i data-lucide="x"></i></button>
                     </div>
-                `;
+                    <form onsubmit="${formAction}" class="space-y-4">
+                        <div class="space-y-1">
+                            <label class="text-xs font-bold text-gray-500 uppercase ml-1">Data</label>
+                            <input type="date" name="date" required value="${state.tempManualEntry.date}" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 outline-none" lang="pt-BR">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-gray-500 uppercase ml-1">Horas</label>
+                                <input type="number" name="hours" min="0" max="24" value="${state.tempManualEntry.hours}" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 text-center outline-none">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-gray-500 uppercase ml-1">Minutos</label>
+                                <input type="number" name="minutes" min="0" max="59" value="${state.tempManualEntry.minutes}" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 text-center outline-none">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-gray-500 uppercase ml-1">RVs</label>
+                                <input type="number" name="rvs" min="0" value="${state.tempManualEntry.rvs}" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 text-center outline-none">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-gray-500 uppercase ml-1">Estudos</label>
+                                <input type="number" name="studies" min="0" value="${state.tempManualEntry.studies}" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 text-center outline-none">
+                            </div>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs font-bold text-gray-500 uppercase ml-1">Notas</label>
+                            <textarea name="notes" rows="2" class="w-full bg-gray-50 p-4 rounded-2xl font-semibold text-gray-900 outline-none resize-none">${state.tempManualEntry.notes}</textarea>
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 text-white py-4 rounded-[18px] font-bold shadow-lg shadow-blue-200 active:scale-95 transition-all">
+                            Salvar
+                        </button>
+                    </form>
+                </div>
+                    </div >
+            `;
             }
 
             // VISIT MODAL
             if (state.modals.visit) {
                 overlays += `
-                    <div class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
-                        <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-slide-up">
-                            <div class="flex justify-between items-center mb-6">
-                                <div>
-                                    <h3 class="text-2xl font-black text-gray-900">Nova Visita</h3>
-                                    <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Registrar interação</p>
-                                </div>
-                                <button onclick="closeVisitModal()" class="text-gray-400 bg-gray-50 p-2 rounded-full"><i data-lucide="x"></i></button>
-                            </div>
-                            <form onsubmit="saveVisit(event)" class="space-y-4">
-                                <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                                    <div class="text-xs font-bold text-gray-400 uppercase mb-1">Data</div>
-                                    <input type="date" name="date" required value="${state.tempVisit.date}" class="w-full bg-transparent font-bold text-gray-900 outline-none">
-                                </div>
-                                <div class="space-y-1">
-                                    <label class="text-xs font-bold text-gray-500 uppercase ml-1">Notas</label>
-                                    <textarea name="notes" rows="2" placeholder="O que foi considerado..." class="w-full bg-gray-50 p-3 rounded-xl font-medium text-gray-900 outline-none resize-none"></textarea>
-                                </div>
-                                <div class="border-t border-gray-100 pt-4 mt-2">
-                                    <div class="flex items-center gap-2 mb-2">
-                                        <i data-lucide="calendar-clock" class="text-blue-500" size="16"></i>
-                                        <span class="font-bold text-sm text-gray-900">Próxima Visita</span>
-                                    </div>
-                                    <div class="flex gap-2 mb-2">
-                                         <div class="bg-blue-50 p-3 rounded-xl border border-blue-100 flex-1">
-                                            <input type="date" name="nextVisitDate" class="w-full bg-transparent font-bold text-blue-900 outline-none text-sm">
-                                        </div>
-                                    </div>
-                                    <div class="bg-blue-50 p-3 rounded-xl border border-blue-100">
-                                        <input name="nextVisitNotes" placeholder="O que tratar..." class="w-full bg-transparent font-medium text-blue-900 outline-none text-sm">
-                                    </div>
-                                </div>
-                                <button type="submit" class="w-full bg-blue-600 text-white py-4 rounded-[18px] font-bold shadow-lg shadow-blue-200 active:scale-95 transition-all mt-2">
-                                    Salvar Visita
-                                </button>
-                            </form>
+            < div class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6" >
+                <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-slide-up">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h3 class="text-2xl font-black text-gray-900">Nova Visita</h3>
+                            <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Registrar interação</p>
                         </div>
+                        <button onclick="closeVisitModal()" class="text-gray-400 bg-gray-50 p-2 rounded-full"><i data-lucide="x"></i></button>
                     </div>
-                 `;
+                    <form onsubmit="saveVisit(event)" class="space-y-4">
+                        <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                            <div class="text-xs font-bold text-gray-400 uppercase mb-1">Data</div>
+                            <input type="date" name="date" required value="${state.tempVisit.date}" class="w-full bg-transparent font-bold text-gray-900 outline-none">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs font-bold text-gray-500 uppercase ml-1">Notas</label>
+                            <textarea name="notes" rows="2" placeholder="O que foi considerado..." class="w-full bg-gray-50 p-3 rounded-xl font-medium text-gray-900 outline-none resize-none"></textarea>
+                        </div>
+                        <div class="border-t border-gray-100 pt-4 mt-2">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i data-lucide="calendar-clock" class="text-blue-500" size="16"></i>
+                                <span class="font-bold text-sm text-gray-900">Próxima Visita</span>
+                            </div>
+                            <div class="flex gap-2 mb-2">
+                                <div class="bg-blue-50 p-3 rounded-xl border border-blue-100 flex-1">
+                                    <input type="date" name="nextVisitDate" class="w-full bg-transparent font-bold text-blue-900 outline-none text-sm">
+                                </div>
+                            </div>
+                            <div class="bg-blue-50 p-3 rounded-xl border border-blue-100">
+                                <input name="nextVisitNotes" placeholder="O que tratar..." class="w-full bg-transparent font-medium text-blue-900 outline-none text-sm">
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 text-white py-4 rounded-[18px] font-bold shadow-lg shadow-blue-200 active:scale-95 transition-all mt-2">
+                            Salvar Visita
+                        </button>
+                    </form>
+                </div>
+                    </div >
+            `;
             }
 
             // CONTACT MODAL
             if (state.modals.contact) {
                 overlays += `
-                    <div class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
-                        <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-slide-up">
-                            <div class="flex justify-between items-center mb-6">
-                                <div>
-                                    <h3 class="text-2xl font-black text-gray-900">Novo Interessado</h3>
-                                    <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Adicionar aos registros</p>
-                                </div>
-                                <button onclick="closeContactModal()" class="text-gray-400 bg-gray-50 p-2 rounded-full"><i data-lucide="x"></i></button>
-                            </div>
-                            <form onsubmit="saveContact(event)" class="space-y-4">
-                                <div class="space-y-1">
-                                    <label class="text-xs font-bold text-gray-500 uppercase ml-1">Nome *</label>
-                                    <input name="name" required placeholder="Nome do morador" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 focus:ring-2 focus:ring-blue-500 transition-all" />
-                                </div>
-                                <div class="space-y-1">
-                                    <label class="text-xs font-bold text-gray-500 uppercase ml-1">Endereço</label>
-                                    <input name="address" placeholder="Rua, número, bairro..." class="w-full bg-gray-50 p-4 rounded-2xl font-semibold text-gray-900 focus:ring-2 focus:ring-blue-500 transition-all" />
-                                </div>
-                                <div class="space-y-1">
-                                    <label class="text-xs font-bold text-gray-500 uppercase ml-1">Assunto/Matéria</label>
-                                    <input value="${state.tempSubject || ''}" oninput="state.tempSubject = this.value" placeholder="Ex: Esperança..." class="w-full bg-gray-50 p-4 rounded-2xl font-semibold text-gray-900 focus:ring-2 focus:ring-blue-500 transition-all" />
-                                </div>
-                                <div class="space-y-1">
-                                    <label class="text-xs font-bold text-gray-500 uppercase ml-1">Notas</label>
-                                    <textarea name="notes" placeholder="Observações..." rows="2" class="w-full bg-gray-50 p-4 rounded-2xl font-semibold text-gray-900 focus:ring-2 focus:ring-blue-500 transition-all resize-none"></textarea>
-                                </div>
-                                <div class="grid grid-cols-2 gap-3 pt-2">
-                                    <button type="button" onclick="state.tempContactType='rv'; render()" class="p-4 rounded-2xl font-bold border-2 transition-all ${state.tempContactType === 'rv' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-100 text-gray-400'}">Revisita</button>
-                                    <button type="button" onclick="state.tempContactType='study'; render()" class="p-4 rounded-2xl font-bold border-2 transition-all ${state.tempContactType === 'study' ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-100 text-gray-400'}">Estudo</button>
-                                </div>
-                                <button type="submit" class="w-full bg-blue-600 text-white py-5 rounded-[22px] font-bold shadow-lg shadow-blue-200 active:scale-95 transition-all mt-4">
-                                    Salvar Interessado
-                                </button>
-                            </form>
+            < div class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6" >
+                <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-slide-up">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h3 class="text-2xl font-black text-gray-900">Novo Interessado</h3>
+                            <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Adicionar aos registros</p>
                         </div>
+                        <button onclick="closeContactModal()" class="text-gray-400 bg-gray-50 p-2 rounded-full"><i data-lucide="x"></i></button>
                     </div>
+                    <form onsubmit="saveContact(event)" class="space-y-4">
+                        <div class="space-y-1">
+                            <label class="text-xs font-bold text-gray-500 uppercase ml-1">Nome *</label>
+                            <input name="name" required placeholder="Nome do morador" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 focus:ring-2 focus:ring-blue-500 transition-all" />
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs font-bold text-gray-500 uppercase ml-1">Endereço</label>
+                            <input name="address" placeholder="Rua, número, bairro..." class="w-full bg-gray-50 p-4 rounded-2xl font-semibold text-gray-900 focus:ring-2 focus:ring-blue-500 transition-all" />
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs font-bold text-gray-500 uppercase ml-1">Assunto/Matéria</label>
+                            <input value="${state.tempSubject || ''}" oninput="state.tempSubject = this.value" placeholder="Ex: Esperança..." class="w-full bg-gray-50 p-4 rounded-2xl font-semibold text-gray-900 focus:ring-2 focus:ring-blue-500 transition-all" />
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs font-bold text-gray-500 uppercase ml-1">Notas</label>
+                            <textarea name="notes" placeholder="Observações..." rows="2" class="w-full bg-gray-50 p-4 rounded-2xl font-semibold text-gray-900 focus:ring-2 focus:ring-blue-500 transition-all resize-none"></textarea>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 pt-2">
+                            <button type="button" onclick="state.tempContactType='rv'; render()" class="p-4 rounded-2xl font-bold border-2 transition-all ${state.tempContactType === 'rv' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-100 text-gray-400'}">Revisita</button>
+                            <button type="button" onclick="state.tempContactType='study'; render()" class="p-4 rounded-2xl font-bold border-2 transition-all ${state.tempContactType === 'study' ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-100 text-gray-400'}">Estudo</button>
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 text-white py-5 rounded-[22px] font-bold shadow-lg shadow-blue-200 active:scale-95 transition-all mt-4">
+                            Salvar Interessado
+                        </button>
+                    </form>
+                </div>
+                    </div >
                 `;
             }
 

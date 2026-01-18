@@ -1326,6 +1326,82 @@
             }
         };
 
+        const ViewProfile = () => {
+            const now = new Date();
+            const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            const auxActiveThisMonth = state.userProfile.auxMonths.includes(monthKey);
+            const auxSpecialThisMonth = state.userProfile.auxSpecialMonths.includes(monthKey);
+
+            return `
+                <div class="p-6 space-y-6 animate-slide-up pb-32">
+                    <header class="pt-8">
+                        <h1 class="text-3xl font-black text-gray-900">Perfil</h1>
+                        <p class="text-sm text-gray-400 font-medium">Suas informações</p>
+                    </header>
+                    
+                     <div class="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100">
+                        <form onsubmit="saveProfile(event)" class="space-y-5">
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-gray-500 uppercase ml-1">Seu Nome</label>
+                                <input name="name" value="${state.userProfile.name}" placeholder="Seu nome" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none transition-all" />
+                            </div>
+                            
+                            <div class="space-y-3">
+                                <label class="text-xs font-bold text-gray-500 uppercase ml-1">Modalidade</label>
+                                
+                                <div class="grid grid-cols-1 gap-2">
+                                    <label class="flex items-center gap-3 p-4 border rounded-2xl cursor-pointer hover:bg-gray-50 ${state.userProfile.role === 'publisher' ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : 'border-gray-200'}">
+                                        <input type="radio" name="role" value="publisher" onchange="state.userProfile.role=this.value; render()" ${state.userProfile.role === 'publisher' ? 'checked' : ''} class="w-5 h-5 text-blue-600">
+                                        <div>
+                                            <div class="font-bold text-gray-900">Publicador</div>
+                                            <div class="text-xs text-gray-400">Sem obrigação de horas</div>
+                                        </div>
+                                    </label>
+                                    
+                                    <label class="flex items-center gap-3 p-4 border rounded-2xl cursor-pointer hover:bg-gray-50 ${state.userProfile.role === 'aux' ? 'border-green-500 bg-green-50 ring-1 ring-green-500' : 'border-gray-200'}">
+                                        <input type="radio" name="role" value="aux" onchange="state.userProfile.role=this.value; render()" ${state.userProfile.role === 'aux' ? 'checked' : ''} class="w-5 h-5 text-green-600">
+                                        <div>
+                                            <div class="font-bold text-gray-900">Pioneiro Auxiliar</div>
+                                            <div class="text-xs text-gray-400">Alvo de 30h ou 15h</div>
+                                        </div>
+                                    </label>
+                                    
+                                    <label class="flex items-center gap-3 p-4 border rounded-2xl cursor-pointer hover:bg-gray-50 ${state.userProfile.role === 'regular' ? 'border-yellow-500 bg-yellow-50 ring-1 ring-yellow-500' : 'border-gray-200'}">
+                                        <input type="radio" name="role" value="regular" onchange="state.userProfile.role=this.value; render()" ${state.userProfile.role === 'regular' ? 'checked' : ''} class="w-5 h-5 text-yellow-600">
+                                        <div>
+                                            <div class="font-bold text-gray-900">Pioneiro Regular</div>
+                                            <div class="text-xs text-gray-400">Alvo anual de 600h</div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div id="aux-options" class="${state.userProfile.role === 'aux' ? 'block' : 'hidden'} space-y-4 bg-gray-50 p-4 rounded-2xl">
+                                <div class="flex items-center justify-between">
+                                    <label class="text-sm font-bold text-gray-700">Indeterminado?</label>
+                                    <input type="checkbox" name="auxIndefinite" ${state.userProfile.auxIndefinite ? 'checked' : ''} class="w-5 h-5 rounded text-green-600">
+                                </div>
+                                <hr class="border-gray-200">
+                                <div class="text-xs font-bold text-gray-400 uppercase">Mês Atual:</div>
+                                <label class="flex items-center gap-2">
+                                    <input type="checkbox" name="auxThisMonth" ${auxActiveThisMonth ? 'checked' : ''} class="w-5 h-5 rounded text-green-600">
+                                    <span class="text-sm font-medium">Sou Auxiliar este mês</span>
+                                </label>
+                                <label class="flex items-center gap-2">
+                                    <input type="checkbox" name="auxSpecial" ${auxSpecialThisMonth ? 'checked' : ''} class="w-5 h-5 rounded text-green-600">
+                                    <span class="text-sm font-medium">Campanha Especial (15h)</span>
+                                </label>
+                            </div>
+
+                            <button type="submit" class="w-full bg-black text-white py-4 rounded-[18px] font-bold shadow-lg shadow-gray-200 active:scale-95 transition-all">
+                                Salvar Alterações
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            `;
+        };
+
         const render = () => {
             const container = document.getElementById('app');
             const overlayContainer = document.getElementById('overlays');
@@ -1404,120 +1480,44 @@
                 `;
             }
 
-
-            const ViewProfile = () => {
-                const now = new Date();
-                const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-                const auxActiveThisMonth = state.userProfile.auxMonths.includes(monthKey);
-                const auxSpecialThisMonth = state.userProfile.auxSpecialMonths.includes(monthKey);
-
-                return `
-                    <div class="p-6 space-y-6 animate-slide-up pb-32">
-                        <header class="pt-8">
-                            <h1 class="text-3xl font-black text-gray-900">Perfil</h1>
-                            <p class="text-sm text-gray-400 font-medium">Suas informações</p>
-                        </header>
-                        
-                         <div class="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100">
-                            <form onsubmit="saveProfile(event)" class="space-y-5">
-                                <div class="space-y-1">
-                                    <label class="text-xs font-bold text-gray-500 uppercase ml-1">Seu Nome</label>
-                                    <input name="name" value="${state.userProfile.name}" placeholder="Seu nome" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none transition-all" />
-                                </div>
-                                
-                                <div class="space-y-3">
-                                    <label class="text-xs font-bold text-gray-500 uppercase ml-1">Modalidade</label>
-                                    
-                                    <div class="grid grid-cols-1 gap-2">
-                                        <label class="flex items-center gap-3 p-4 border rounded-2xl cursor-pointer hover:bg-gray-50 ${state.userProfile.role === 'publisher' ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : 'border-gray-200'}">
-                                            <input type="radio" name="role" value="publisher" onchange="state.userProfile.role=this.value; render()" ${state.userProfile.role === 'publisher' ? 'checked' : ''} class="w-5 h-5 text-blue-600">
-                                            <div>
-                                                <div class="font-bold text-gray-900">Publicador</div>
-                                                <div class="text-xs text-gray-400">Sem obrigação de horas</div>
-                                            </div>
-                                        </label>
-                                        
-                                        <label class="flex items-center gap-3 p-4 border rounded-2xl cursor-pointer hover:bg-gray-50 ${state.userProfile.role === 'aux' ? 'border-green-500 bg-green-50 ring-1 ring-green-500' : 'border-gray-200'}">
-                                            <input type="radio" name="role" value="aux" onchange="state.userProfile.role=this.value; render()" ${state.userProfile.role === 'aux' ? 'checked' : ''} class="w-5 h-5 text-green-600">
-                                            <div>
-                                                <div class="font-bold text-gray-900">Pioneiro Auxiliar</div>
-                                                <div class="text-xs text-gray-400">Alvo de 30h ou 15h</div>
-                                            </div>
-                                        </label>
-                                        
-                                        <label class="flex items-center gap-3 p-4 border rounded-2xl cursor-pointer hover:bg-gray-50 ${state.userProfile.role === 'regular' ? 'border-yellow-500 bg-yellow-50 ring-1 ring-yellow-500' : 'border-gray-200'}">
-                                            <input type="radio" name="role" value="regular" onchange="state.userProfile.role=this.value; render()" ${state.userProfile.role === 'regular' ? 'checked' : ''} class="w-5 h-5 text-yellow-600">
-                                            <div>
-                                                <div class="font-bold text-gray-900">Pioneiro Regular</div>
-                                                <div class="text-xs text-gray-400">Alvo anual de 600h</div>
-                                            </div>
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <div id="aux-options" class="${state.userProfile.role === 'aux' ? 'block' : 'hidden'} space-y-4 bg-gray-50 p-4 rounded-2xl">
-                                    <div class="flex items-center justify-between">
-                                        <label class="text-sm font-bold text-gray-700">Indeterminado?</label>
-                                        <input type="checkbox" name="auxIndefinite" ${state.userProfile.auxIndefinite ? 'checked' : ''} class="w-5 h-5 rounded text-green-600">
-                                    </div>
-                                    <hr class="border-gray-200">
-                                    <div class="text-xs font-bold text-gray-400 uppercase">Mês Atual:</div>
-                                    <label class="flex items-center gap-2">
-                                        <input type="checkbox" name="auxThisMonth" ${auxActiveThisMonth ? 'checked' : ''} class="w-5 h-5 rounded text-green-600">
-                                        <span class="text-sm font-medium">Sou Auxiliar este mês</span>
-                                    </label>
-                                    <label class="flex items-center gap-2">
-                                        <input type="checkbox" name="auxSpecial" ${auxSpecialThisMonth ? 'checked' : ''} class="w-5 h-5 rounded text-green-600">
-                                        <span class="text-sm font-medium">Campanha Especial (15h)</span>
-                                    </label>
-                                </div>
-
-                                <button type="submit" class="w-full bg-black text-white py-4 rounded-[18px] font-bold shadow-lg shadow-gray-200 active:scale-95 transition-all">
-                                    Salvar Alterações
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                `;
-            };
-
-            // BACKUP LOADING MODAL (Not implemented but good to have)
             // BACKUP MODAL
             if (state.modals.backup) {
                 overlays += `
                     <div class="fixed inset-0 backup-modal z-[100] flex items-center justify-center p-6">
-                <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-slide-up">
-                    <div class="flex justify-between items-center mb-6">
-                        <div>
-                            <h3 class="text-2xl font-black text-gray-900">Backup de Dados</h3>
-                            <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Salvar ou restaurar informações</p>
-                        </div>
-                        <button onclick="closeBackupModal()" class="text-gray-400 bg-gray-50 p-2 rounded-full"><i data-lucide="x"></i></button>
-                    </div>
-
-                    <div class="space-y-4">
-                        <div class="bg-gray-50 p-4 rounded-2xl">
-                            <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-slide-up">
+                            <div class="flex justify-between items-center mb-6">
                                 <div>
-                                    <p class="text-xs font-bold text-gray-400 uppercase mb-1">Registros</p>
-                                    <p class="text-lg font-black text-gray-900">${state.entries.length}</p>
+                                    <h3 class="text-2xl font-black text-gray-900">Backup de Dados</h3>
+                                    <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Salvar ou restaurar informações</p>
                                 </div>
-                                <div>
-                                    <p class="text-xs font-bold text-gray-400 uppercase mb-1">Interessados</p>
-                                    <p class="text-lg font-black text-gray-900">${state.contacts.length}</p>
+                                <button onclick="closeBackupModal()" class="text-gray-400 bg-gray-50 p-2 rounded-full"><i data-lucide="x"></i></button>
+                            </div>
+
+                            <div class="space-y-4">
+                                <div class="bg-gray-50 p-4 rounded-2xl">
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <p class="text-xs font-bold text-gray-400 uppercase mb-1">Registros</p>
+                                            <p class="text-lg font-black text-gray-900">${state.entries.length}</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs font-bold text-gray-400 uppercase mb-1">Interessados</p>
+                                            <p class="text-lg font-black text-gray-900">${state.contacts.length}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="space-y-3">
+                                    <button onclick="createBackup()" class="w-full bg-blue-600 text-white py-4 rounded-[18px] font-bold shadow-lg shadow-blue-200 active:scale-95 transition-all flex items-center justify-center gap-2">
+                                        <i data-lucide="download-cloud" size="18"></i> Criar Backup
+                                    </button>
+                                    <button onclick="openRestoreModal()" class="w-full bg-gray-100 text-gray-600 py-4 rounded-[18px] font-bold border border-gray-200 active:scale-95 transition-all flex items-center justify-center gap-2">
+                                        <i data-lucide="upload-cloud" size="18"></i> Restaurar Backup
+                                    </button>
+                                    <button onclick="if(confirm('Tem certeza que deseja limpar todos os dados?')) { localStorage.clear(); location.reload(); }" class="w-full bg-red-50 text-red-600 py-4 rounded-[18px] font-bold border border-red-100 active:scale-95 transition-all flex items-center justify-center gap-2">
+                                        <i data-lucide="trash-2" size="18"></i> Limpar Dados
+                                    </button>
                                 </div>
                             </div>
-                        </div>
-                        <div class="space-y-3">
-                            <button onclick="createBackup()" class="w-full bg-blue-600 text-white py-4 rounded-[18px] font-bold shadow-lg shadow-blue-200 active:scale-95 transition-all flex items-center justify-center gap-2">
-                                <i data-lucide="download-cloud" size="18"></i> Criar Backup
-                            </button>
-                            <button onclick="openRestoreModal()" class="w-full bg-gray-100 text-gray-600 py-4 rounded-[18px] font-bold border border-gray-200 active:scale-95 transition-all flex items-center justify-center gap-2">
-                                <i data-lucide="upload-cloud" size="18"></i> Restaurar Backup
-                            </button>
-                            <button onclick="if(confirm('Tem certeza que deseja limpar todos os dados?')) { localStorage.clear(); location.reload(); }" class="w-full bg-red-50 text-red-600 py-4 rounded-[18px] font-bold border border-red-100 active:scale-95 transition-all flex items-center justify-center gap-2">
-                                <i data-lucide="trash-2" size="18"></i> Limpar Dados
-                            </button>
                         </div>
                     </div>
                 `;
@@ -1527,26 +1527,26 @@
             if (state.modals.restore) {
                 overlays += `
                     <div class="fixed inset-0 backup-modal z-[100] flex items-center justify-center p-6">
-                <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-slide-up">
-                    <div class="flex justify-between items-center mb-6">
-                        <div>
-                            <h3 class="text-2xl font-black text-gray-900">Restaurar Backup</h3>
-                            <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Selecione o arquivo</p>
-                        </div>
-                        <button onclick="closeRestoreModal()" class="text-gray-400 bg-gray-50 p-2 rounded-full"><i data-lucide="x"></i></button>
-                    </div>
-                    <div class="space-y-6">
-                        <div class="border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center">
-                            <div class="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                                <i data-lucide="upload" class="text-gray-400" size="24"></i>
+                        <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-slide-up">
+                            <div class="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 class="text-2xl font-black text-gray-900">Restaurar Backup</h3>
+                                    <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Selecione o arquivo</p>
+                                </div>
+                                <button onclick="closeRestoreModal()" class="text-gray-400 bg-gray-50 p-2 rounded-full"><i data-lucide="x"></i></button>
                             </div>
-                            <label class="bg-blue-600 text-white px-6 py-3 rounded-[18px] font-bold inline-block cursor-pointer hover:bg-blue-700 transition-colors">
-                                <input type="file" accept=".json" onchange="restoreBackup(event)" class="hidden" />
-                                Selecionar Arquivo
-                            </label>
+                            <div class="space-y-6">
+                                <div class="border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center">
+                                    <div class="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                                        <i data-lucide="upload" class="text-gray-400" size="24"></i>
+                                    </div>
+                                    <label class="bg-blue-600 text-white px-6 py-3 rounded-[18px] font-bold inline-block cursor-pointer hover:bg-blue-700 transition-colors">
+                                        <input type="file" accept=".json" onchange="restoreBackup(event)" class="hidden" />
+                                        Selecionar Arquivo
+                                    </label>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
                     </div>
                 `;
             }
@@ -1559,40 +1559,6 @@
 
                 overlays += `
                     <div class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
-                <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-slide-up">
-                    <div class="flex justify-between items-center mb-6">
-                        <div>
-                            <h3 class="text-2xl font-black text-gray-900">${modalTitle}</h3>
-                            <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Adicionar horas</p>
-                        </div>
-                        <button onclick="closeManualEntryModal()" class="text-gray-400 bg-gray-50 p-2 rounded-full"><i data-lucide="x"></i></button>
-                    </div>
-                    <form onsubmit="${formAction}" class="space-y-4">
-                        <div class="space-y-1">
-                            <label class="text-xs font-bold text-gray-500 uppercase ml-1">Data</label>
-                            <input type="date" name="date" required value="${state.tempManualEntry.date}" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 outline-none" lang="pt-BR">
-                        </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div class="space-y-1">
-                                <label class="text-xs font-bold text-gray-500 uppercase ml-1">Horas</label>
-                                <input type="number" name="hours" min="0" max="24" value="${state.tempManualEntry.hours}" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 text-center outline-none">
-                            </div>
-                            <div class="space-y-1">
-                                <label class="text-xs font-bold text-gray-500 uppercase ml-1">Minutos</label>
-                                <input type="number" name="minutes" min="0" max="59" value="${state.tempManualEntry.minutes}" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 text-center outline-none">
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div class="space-y-1">
-                                <label class="text-xs font-bold text-gray-500 uppercase ml-1">RVs</label>
-                                <input type="number" name="rvs" min="0" value="${state.tempManualEntry.rvs}" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 text-center outline-none">
-                            </div>
-                            <div class="space-y-1">
-                                <label class="text-xs font-bold text-gray-500 uppercase ml-1">Estudos</label>
-                                <input type="number" name="studies" min="0" value="${state.tempManualEntry.studies}" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 text-center outline-none">
-                            </div>
-                        </div>
-                        <div class="space-y-1">
                         <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-slide-up">
                             <div class="flex justify-between items-center mb-6">
                                 <div>
@@ -1683,6 +1649,7 @@
                 `;
             }
 
+            // CONTACT MODAL
             if (state.modals.contact) {
                 overlays += `
                     <div class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
@@ -1695,31 +1662,31 @@
                                 <button onclick="closeContactModal()" class="text-gray-400 bg-gray-50 p-2 rounded-full"><i data-lucide="x"></i></button>
                             </div>
                             <form onsubmit="saveContact(event)" class="space-y-4">
-                        <div class="space-y-1">
-                            <label class="text-xs font-bold text-gray-500 uppercase ml-1">Nome *</label>
-                            <input name="name" required placeholder="Nome do morador" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 focus:ring-2 focus:ring-blue-500 transition-all" />
+                                <div class="space-y-1">
+                                    <label class="text-xs font-bold text-gray-500 uppercase ml-1">Nome *</label>
+                                    <input name="name" required placeholder="Nome do morador" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 focus:ring-2 focus:ring-blue-500 transition-all" />
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-xs font-bold text-gray-500 uppercase ml-1">Endereço</label>
+                                    <input name="address" placeholder="Rua, número, bairro..." class="w-full bg-gray-50 p-4 rounded-2xl font-semibold text-gray-900 focus:ring-2 focus:ring-blue-500 transition-all" />
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-xs font-bold text-gray-500 uppercase ml-1">Assunto/Matéria</label>
+                                    <input value="${state.tempSubject || ''}" oninput="state.tempSubject = this.value" placeholder="Ex: Esperança..." class="w-full bg-gray-50 p-4 rounded-2xl font-semibold text-gray-900 focus:ring-2 focus:ring-blue-500 transition-all" />
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-xs font-bold text-gray-500 uppercase ml-1">Notas</label>
+                                    <textarea name="notes" placeholder="Observações..." rows="2" class="w-full bg-gray-50 p-4 rounded-2xl font-semibold text-gray-900 focus:ring-2 focus:ring-blue-500 transition-all resize-none"></textarea>
+                                </div>
+                                <div class="grid grid-cols-2 gap-3 pt-2">
+                                    <button type="button" onclick="state.tempContactType='rv'; render()" class="p-4 rounded-2xl font-bold border-2 transition-all ${state.tempContactType === 'rv' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-100 text-gray-400'}">Revisita</button>
+                                    <button type="button" onclick="state.tempContactType='study'; render()" class="p-4 rounded-2xl font-bold border-2 transition-all ${state.tempContactType === 'study' ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-100 text-gray-400'}">Estudo</button>
+                                </div>
+                                <button type="submit" class="w-full bg-blue-600 text-white py-5 rounded-[22px] font-bold shadow-lg shadow-blue-200 active:scale-95 transition-all mt-4">
+                                    Salvar Interessado
+                                </button>
+                            </form>
                         </div>
-                        <div class="space-y-1">
-                            <label class="text-xs font-bold text-gray-500 uppercase ml-1">Endereço</label>
-                            <input name="address" placeholder="Rua, número, bairro..." class="w-full bg-gray-50 p-4 rounded-2xl font-semibold text-gray-900 focus:ring-2 focus:ring-blue-500 transition-all" />
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-xs font-bold text-gray-500 uppercase ml-1">Assunto/Matéria</label>
-                            <input value="${state.tempSubject || ''}" oninput="state.tempSubject = this.value" placeholder="Ex: Esperança..." class="w-full bg-gray-50 p-4 rounded-2xl font-semibold text-gray-900 focus:ring-2 focus:ring-blue-500 transition-all" />
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-xs font-bold text-gray-500 uppercase ml-1">Notas</label>
-                            <textarea name="notes" placeholder="Observações..." rows="2" class="w-full bg-gray-50 p-4 rounded-2xl font-semibold text-gray-900 focus:ring-2 focus:ring-blue-500 transition-all resize-none"></textarea>
-                        </div>
-                        <div class="grid grid-cols-2 gap-3 pt-2">
-                            <button type="button" onclick="state.tempContactType='rv'; render()" class="p-4 rounded-2xl font-bold border-2 transition-all ${state.tempContactType === 'rv' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-100 text-gray-400'}">Revisita</button>
-                            <button type="button" onclick="state.tempContactType='study'; render()" class="p-4 rounded-2xl font-bold border-2 transition-all ${state.tempContactType === 'study' ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-100 text-gray-400'}">Estudo</button>
-                        </div>
-                        <button type="submit" class="w-full bg-blue-600 text-white py-5 rounded-[22px] font-bold shadow-lg shadow-blue-200 active:scale-95 transition-all mt-4">
-                            Salvar Interessado
-                        </button>
-                    </form>
-                </div>
                     </div>
                 `;
             }

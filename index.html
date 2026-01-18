@@ -1407,12 +1407,12 @@
 
             const ViewProfile = () => {
                 const now = new Date();
-                const monthKey = `${now.getFullYear()} -${String(now.getMonth() + 1).padStart(2, '0')} `;
+                const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
                 const auxActiveThisMonth = state.userProfile.auxMonths.includes(monthKey);
                 const auxSpecialThisMonth = state.userProfile.auxSpecialMonths.includes(monthKey);
 
                 return `
-                < div class="p-6 space-y-6 animate-slide-up pb-32" >
+                    <div class="p-6 space-y-6 animate-slide-up pb-32">
                         <header class="pt-8">
                             <h1 class="text-3xl font-black text-gray-900">Perfil</h1>
                             <p class="text-sm text-gray-400 font-medium">Suas informações</p>
@@ -1477,15 +1477,15 @@
                                 </button>
                             </form>
                         </div>
-                    </div >
-            `;
+                    </div>
+                `;
             };
 
             // BACKUP LOADING MODAL (Not implemented but good to have)
             // BACKUP MODAL
             if (state.modals.backup) {
                 overlays += `
-            < div class="fixed inset-0 backup-modal z-[100] flex items-center justify-center p-6" >
+                    <div class="fixed inset-0 backup-modal z-[100] flex items-center justify-center p-6">
                 <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-slide-up">
                     <div class="flex justify-between items-center mb-6">
                         <div>
@@ -1520,15 +1520,13 @@
                             </button>
                         </div>
                     </div>
-                </div>
-                    </div >
-            `;
+                `;
             }
 
             // RESTORE MODAL
             if (state.modals.restore) {
                 overlays += `
-            < div class="fixed inset-0 backup-modal z-[100] flex items-center justify-center p-6" >
+                    <div class="fixed inset-0 backup-modal z-[100] flex items-center justify-center p-6">
                 <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-slide-up">
                     <div class="flex justify-between items-center mb-6">
                         <div>
@@ -1549,8 +1547,8 @@
                         </div>
                     </div>
                 </div>
-                    </div >
-            `;
+                    </div>
+                `;
             }
 
             // MANUAL ENTRY MODAL
@@ -1560,7 +1558,7 @@
                 const formAction = isEditing ? `updateManualEntry(event, ${state.tempManualEntry.editingId})` : 'saveManualEntry(event)';
 
                 overlays += `
-            < div class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6" >
+                    <div class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
                 <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-slide-up">
                     <div class="flex justify-between items-center mb-6">
                         <div>
@@ -1595,75 +1593,108 @@
                             </div>
                         </div>
                         <div class="space-y-1">
-                            <label class="text-xs font-bold text-gray-500 uppercase ml-1">Notas</label>
-                            <textarea name="notes" rows="2" class="w-full bg-gray-50 p-4 rounded-2xl font-semibold text-gray-900 outline-none resize-none">${state.tempManualEntry.notes}</textarea>
+                        <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-slide-up">
+                            <div class="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 class="text-2xl font-black text-gray-900">${modalTitle}</h3>
+                                    <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Adicionar horas</p>
+                                </div>
+                                <button onclick="closeManualEntryModal()" class="text-gray-400 bg-gray-50 p-2 rounded-full"><i data-lucide="x"></i></button>
+                            </div>
+                            <form onsubmit="${formAction}" class="space-y-4">
+                                <div class="space-y-1">
+                                    <label class="text-xs font-bold text-gray-500 uppercase ml-1">Data</label>
+                                    <input type="date" name="date" required value="${state.tempManualEntry.date}" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 outline-none" lang="pt-BR">
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="space-y-1">
+                                        <label class="text-xs font-bold text-gray-500 uppercase ml-1">Horas</label>
+                                        <input type="number" name="hours" min="0" max="24" value="${state.tempManualEntry.hours}" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 text-center outline-none">
+                                    </div>
+                                    <div class="space-y-1">
+                                        <label class="text-xs font-bold text-gray-500 uppercase ml-1">Minutos</label>
+                                        <input type="number" name="minutes" min="0" max="59" value="${state.tempManualEntry.minutes}" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 text-center outline-none">
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="space-y-1">
+                                        <label class="text-xs font-bold text-gray-500 uppercase ml-1">RVs</label>
+                                        <input type="number" name="rvs" min="0" value="${state.tempManualEntry.rvs}" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 text-center outline-none">
+                                    </div>
+                                    <div class="space-y-1">
+                                        <label class="text-xs font-bold text-gray-500 uppercase ml-1">Estudos</label>
+                                        <input type="number" name="studies" min="0" value="${state.tempManualEntry.studies}" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 text-center outline-none">
+                                    </div>
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-xs font-bold text-gray-500 uppercase ml-1">Notas</label>
+                                    <textarea name="notes" rows="2" class="w-full bg-gray-50 p-4 rounded-2xl font-semibold text-gray-900 outline-none resize-none">${state.tempManualEntry.notes}</textarea>
+                                </div>
+                                <button type="submit" class="w-full bg-blue-600 text-white py-4 rounded-[18px] font-bold shadow-lg shadow-blue-200 active:scale-95 transition-all">
+                                    Salvar
+                                </button>
+                            </form>
                         </div>
-                        <button type="submit" class="w-full bg-blue-600 text-white py-4 rounded-[18px] font-bold shadow-lg shadow-blue-200 active:scale-95 transition-all">
-                            Salvar
-                        </button>
-                    </form>
-                </div>
-                    </div >
-            `;
+                    </div>
+                `;
             }
 
             // VISIT MODAL
             if (state.modals.visit) {
                 overlays += `
-            < div class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6" >
-                <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-slide-up">
-                    <div class="flex justify-between items-center mb-6">
-                        <div>
-                            <h3 class="text-2xl font-black text-gray-900">Nova Visita</h3>
-                            <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Registrar interação</p>
-                        </div>
-                        <button onclick="closeVisitModal()" class="text-gray-400 bg-gray-50 p-2 rounded-full"><i data-lucide="x"></i></button>
-                    </div>
-                    <form onsubmit="saveVisit(event)" class="space-y-4">
-                        <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                            <div class="text-xs font-bold text-gray-400 uppercase mb-1">Data</div>
-                            <input type="date" name="date" required value="${state.tempVisit.date}" class="w-full bg-transparent font-bold text-gray-900 outline-none">
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-xs font-bold text-gray-500 uppercase ml-1">Notas</label>
-                            <textarea name="notes" rows="2" placeholder="O que foi considerado..." class="w-full bg-gray-50 p-3 rounded-xl font-medium text-gray-900 outline-none resize-none"></textarea>
-                        </div>
-                        <div class="border-t border-gray-100 pt-4 mt-2">
-                            <div class="flex items-center gap-2 mb-2">
-                                <i data-lucide="calendar-clock" class="text-blue-500" size="16"></i>
-                                <span class="font-bold text-sm text-gray-900">Próxima Visita</span>
-                            </div>
-                            <div class="flex gap-2 mb-2">
-                                <div class="bg-blue-50 p-3 rounded-xl border border-blue-100 flex-1">
-                                    <input type="date" name="nextVisitDate" class="w-full bg-transparent font-bold text-blue-900 outline-none text-sm">
+                    <div class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
+                        <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-slide-up">
+                            <div class="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 class="text-2xl font-black text-gray-900">Nova Visita</h3>
+                                    <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Registrar interação</p>
                                 </div>
+                                <button onclick="closeVisitModal()" class="text-gray-400 bg-gray-50 p-2 rounded-full"><i data-lucide="x"></i></button>
                             </div>
-                            <div class="bg-blue-50 p-3 rounded-xl border border-blue-100">
-                                <input name="nextVisitNotes" placeholder="O que tratar..." class="w-full bg-transparent font-medium text-blue-900 outline-none text-sm">
-                            </div>
+                            <form onsubmit="saveVisit(event)" class="space-y-4">
+                                <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                                    <div class="text-xs font-bold text-gray-400 uppercase mb-1">Data</div>
+                                    <input type="date" name="date" required value="${state.tempVisit.date}" class="w-full bg-transparent font-bold text-gray-900 outline-none">
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-xs font-bold text-gray-500 uppercase ml-1">Notas</label>
+                                    <textarea name="notes" rows="2" placeholder="O que foi considerado..." class="w-full bg-gray-50 p-3 rounded-xl font-medium text-gray-900 outline-none resize-none"></textarea>
+                                </div>
+                                <div class="border-t border-gray-100 pt-4 mt-2">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <i data-lucide="calendar-clock" class="text-blue-500" size="16"></i>
+                                        <span class="font-bold text-sm text-gray-900">Próxima Visita</span>
+                                    </div>
+                                    <div class="flex gap-2 mb-2">
+                                        <div class="bg-blue-50 p-3 rounded-xl border border-blue-100 flex-1">
+                                            <input type="date" name="nextVisitDate" class="w-full bg-transparent font-bold text-blue-900 outline-none text-sm">
+                                        </div>
+                                    </div>
+                                    <div class="bg-blue-50 p-3 rounded-xl border border-blue-100">
+                                        <input name="nextVisitNotes" placeholder="O que tratar..." class="w-full bg-transparent font-medium text-blue-900 outline-none text-sm">
+                                    </div>
+                                </div>
+                                <button type="submit" class="w-full bg-blue-600 text-white py-4 rounded-[18px] font-bold shadow-lg shadow-blue-200 active:scale-95 transition-all mt-2">
+                                    Salvar Visita
+                                </button>
+                            </form>
                         </div>
-                        <button type="submit" class="w-full bg-blue-600 text-white py-4 rounded-[18px] font-bold shadow-lg shadow-blue-200 active:scale-95 transition-all mt-2">
-                            Salvar Visita
-                        </button>
-                    </form>
-                </div>
-                    </div >
-            `;
+                    </div>
+                `;
             }
 
-            // CONTACT MODAL
             if (state.modals.contact) {
                 overlays += `
-            < div class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6" >
-                <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-slide-up">
-                    <div class="flex justify-between items-center mb-6">
-                        <div>
-                            <h3 class="text-2xl font-black text-gray-900">Novo Interessado</h3>
-                            <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Adicionar aos registros</p>
-                        </div>
-                        <button onclick="closeContactModal()" class="text-gray-400 bg-gray-50 p-2 rounded-full"><i data-lucide="x"></i></button>
-                    </div>
-                    <form onsubmit="saveContact(event)" class="space-y-4">
+                    <div class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
+                        <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-slide-up">
+                            <div class="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 class="text-2xl font-black text-gray-900">Novo Interessado</h3>
+                                    <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Adicionar aos registros</p>
+                                </div>
+                                <button onclick="closeContactModal()" class="text-gray-400 bg-gray-50 p-2 rounded-full"><i data-lucide="x"></i></button>
+                            </div>
+                            <form onsubmit="saveContact(event)" class="space-y-4">
                         <div class="space-y-1">
                             <label class="text-xs font-bold text-gray-500 uppercase ml-1">Nome *</label>
                             <input name="name" required placeholder="Nome do morador" class="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 focus:ring-2 focus:ring-blue-500 transition-all" />
@@ -1689,7 +1720,7 @@
                         </button>
                     </form>
                 </div>
-                    </div >
+                    </div>
                 `;
             }
 
